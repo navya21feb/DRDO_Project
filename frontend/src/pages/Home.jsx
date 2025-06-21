@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import LoginForm from '../components/LoginForm';
-import StudentDashboard from '../components/StudentdashBoard';
+import StudentDashboard from '../studentDashboard/StudentDashboard';
 import AdminDashboard from '../components/AdminDashboard';
 import Sidebar from '../components/Sidebar';
 
