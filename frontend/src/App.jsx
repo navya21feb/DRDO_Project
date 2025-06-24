@@ -7,20 +7,11 @@ import {
   useLocation,
 } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-// UPDATED: Remove AdminSidebar import since we're using the new structure
-// import AdminSidebar from "./components/AdminSidebar";
 import Overview from "./studentDashboard/Overview";
 import Applications from "./studentDashboard/Applications";
 import Profile from "./studentDashboard/Profile";
 import Notifications from "./studentDashboard/Notifications";
 import Settings from "./studentDashboard/Settings";
-// UPDATED: Remove individual admin component imports
-// import AdminOverview from "./adminDashboard/AdminOverview";
-// import StudentManagement from "./adminDashboard/StudentManagement";
-// import ApplicationManagement from "./adminDashboard/ApplicationManagement";
-// import UniversityManagement from "./adminDashboard/UniversityManagement";
-// import AdminSettings from "./adminDashboard/AdminSettings";
-// UPDATED: Add the new AdminDashboard import
 import AdminDashboard from "./adminDashboard";
 import LoginForm from "./components/LoginForm";
 import SignupForm from "./components/Signup";

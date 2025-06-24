@@ -18,11 +18,10 @@ const Applications = ({ applications, setApplications }) => {
   };
 
   const filteredApplications = applications.filter(app => {
-    const matchesSearch = app.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          app.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          app.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSearch = (app.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                      (app.department?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                      (app.location?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
   });
 
   const statusCounts = {
