@@ -1,31 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "../api/axiosConfig";
 
 const LoginForm = ({ setCurrentUser }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    // Dummy login logic
-    if (email === "admin@drdo.in") {
-      setCurrentUser({
-        id: 0,
-        name: "Admin User",
-        email: "admin@drdo.in",
-        role: "admin",
-      });
-      navigate("/admin"); // 👈 redirect to admin dashboard
-    } else {
-      setCurrentUser({
-        id: 1,
-        name: "Rahul Sharma",
-        email: email,
-        role: "student",
-      });
-      navigate("/overview"); // 👈 redirect to student dashboard
+    try {
+      const res = await axios.post("/auth/login", { email, password });
+
+      const { token, user } = res.data;
+
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      setCurrentUser(user);
+      navigate(user.role === "admin" ? "/admin" : "/overview");
+    } catch (err) {
+      alert("Login failed. Please check credentials.");
+      console.error(err);
     }
   };
 
