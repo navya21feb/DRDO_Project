@@ -11,5 +11,6 @@ exports.updateStatus = async (req, res) => {
  const { id } = req.params;
  const { status } = req.body;
  const updated = await Application.findByIdAndUpdate(id, { status }, { new: true });
- res.json(updated);
+ res.json(updated);z
 };
+
