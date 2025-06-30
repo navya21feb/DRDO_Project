@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -383,9 +383,9 @@ const AdminProfile = ({ currentUser, setCurrentUser }) => {
   const [formData, setFormData] = useState({
     name: currentUser?.name || 'Admin User',
     email: currentUser?.email || 'admin@drdo.gov.in',
-    phone: currentUser?.phone || '+91-9876543210',
+    phone: currentUser?.phone || '(Add your phone number)',
     department: currentUser?.department || 'Administration',
-    location: currentUser?.location || 'New Delhi'
+    location: currentUser?.location || '(Add your location)',
   });
 
   const handleSave = () => {
@@ -530,60 +530,35 @@ const AdminDashboard = ({
   setNotifications,
   onLogout
 }) => {
-  // Enhanced applications data with additional fields for admin dashboard
-  const [applications, setApplications] = useState([
-    {
-      id: 1,
-      studentName: "John Doe",
-      email: "john@example.com",
-      labApplied: "Artificial Intelligence Lab",
-      branch: "Computer Science",
-      dateApplied: "2024-01-15",
-      status: "pending"
-    },
-    {
-      id: 2,
-      studentName: "Jane Smith",
-      email: "jane@example.com",
-      labApplied: "Robotics Lab",
-      branch: "Mechanical Engineering",
-      dateApplied: "2024-01-14",
-      status: "approved"
-    },
-    {
-      id: 3,
-      studentName: "Mike Johnson",
-      email: "mike@example.com",
-      labApplied: "Cybersecurity Lab",
-      branch: "Information Technology",
-      dateApplied: "2024-01-13",
-      status: "hold"
-    },
-    {
-      id: 4,
-      studentName: "Sarah Wilson",
-      email: "sarah@example.com",
-      labApplied: "Data Science Lab",
-      branch: "Computer Science",
-      dateApplied: "2024-01-12",
-      status: "rejected"
-    },
-    {
-      id: 5,
-      studentName: "David Brown",
-      email: "david@example.com",
-      labApplied: "Machine Learning Lab",
-      branch: "Computer Science",
-      dateApplied: "2024-01-11",
-      status: "pending"
+  const [applications, setApplications] = useState([]);
+
+  const baseURL = import.meta.env.VITE_BACKEND_URL;
+
+useEffect(() => {
+  const fetchApplications = async () => {
+    try {
+      const response = await fetch(`${baseURL}/api/applications`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      setApplications(data);
+    } catch (error) {
+      console.error("Failed to load applications:", error);
     }
-  ]);
+  };
+
+  fetchApplications();
+}, []);
+
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Admin Sidebar */}
       <AdminSidebar currentUser={currentUser} onLogout={onLogout} />
-      
+
       {/* Main Content */}
       <div className="flex-1 p-6">
         <Routes>
