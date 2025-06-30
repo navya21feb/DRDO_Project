@@ -1,31 +1,74 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "../api/axiosConfig";
 
 const SignupForm = ({ setCurrentUser }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'student'
+    name: "",
+    email: "",
+    password: "",
+    role: "student",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    // For now, we'll just auto-login the user after signup
-    setCurrentUser({
-      id: Date.now(),
-      ...formData
-    });
+    try {
+      console.log("Attempting signup with:", formData);
+      
+      // 1. Signup
+      const signupResponse = await axios.post("/auth/signup", formData);
+      console.log("Signup successful:", signupResponse.data);
 
-    navigate('/overview');
+      // 2. Auto-login after signup
+      const loginResponse = await axios.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+      console.log("Login successful:", loginResponse.data);
+
+      const { token, user } = loginResponse.data;
+
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      setCurrentUser(user);
+      navigate(user.role === "admin" ? "/admin" : "/overview");
+    } catch (err) {
+      console.error("Full error object:", err);
+      console.error("Error response:", err.response);
+      
+      const errorMessage = err.response?.data?.error || 
+                          err.response?.data?.message || 
+                          err.message || 
+                          "Signup failed. Please try again.";
+      
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-96">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded shadow-md w-96"
+      >
         <h2 className="text-2xl font-bold mb-6 text-center">Create Account</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
         <input
           type="text"
@@ -49,7 +92,9 @@ const SignupForm = ({ setCurrentUser }) => {
           type="password"
           placeholder="Password"
           value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, password: e.target.value })
+          }
           required
           className="mb-4 w-full px-4 py-2 border rounded"
         />
@@ -65,10 +110,17 @@ const SignupForm = ({ setCurrentUser }) => {
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
         >
-          Sign Up
+          {loading ? "Creating Account..." : "Sign Up"}
         </button>
+        <p className="mt-4 text-sm text-gray-600">
+          Already have an account?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Log in
+          </a>
+        </p>
       </form>
     </div>
   );

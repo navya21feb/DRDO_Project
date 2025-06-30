@@ -15,6 +15,7 @@ import Settings from "./studentDashboard/Settings";
 import AdminDashboard from "./adminDashboard";
 import LoginForm from "./components/LoginForm";
 import SignupForm from "./components/Signup";
+import axios from "./api/axiosConfig"; // Make sure this is imported
 
 const AppContent = ({
   currentUser,
@@ -35,8 +36,10 @@ const AppContent = ({
   // Function to handle logout
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('authToken'); // Clear auth token if you have one
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("currentUser");
+    // Clear axios authorization header
+    delete axios.defaults.headers.common["Authorization"];
   };
 
   return (
@@ -312,6 +315,9 @@ const App = () => {
       localStorage.setItem('currentUser', JSON.stringify(userData));
     } else {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      // Clear axios authorization header
+      delete axios.defaults.headers.common["Authorization"];
     }
   };
 
@@ -319,22 +325,45 @@ const App = () => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        // Check localStorage for saved user data
+        // Check localStorage for saved user data and token
         const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
+        const savedToken = localStorage.getItem('authToken');
+        
+        if (savedUser && savedToken) {
           const userData = JSON.parse(savedUser);
           
           // Validate the saved user data
           if (userData && userData.id && userData.role) {
-            setCurrentUser(userData);
+            // Set the authorization header for axios
+            axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
+            
+            // Verify token with backend
+            try {
+              const response = await axios.get('/auth/verify');
+              if (response.data.valid) {
+                // Update user data in case it changed on the server
+                const updatedUser = response.data.user;
+                setCurrentUser(updatedUser);
+                localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+              }
+            } catch (error) {
+              console.error('Token verification failed:', error);
+              // Token is invalid, clear everything
+              localStorage.removeItem('currentUser');
+              localStorage.removeItem('authToken');
+              delete axios.defaults.headers.common["Authorization"];
+            }
           } else {
             // Invalid user data, clear it
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('authToken');
           }
         }
       } catch (error) {
         console.error('Error loading saved user:', error);
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('authToken');
+        delete axios.defaults.headers.common["Authorization"];
       } finally {
         setIsLoading(false);
       }
