@@ -1,21 +1,17 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  Navigate,
+  Route,
   BrowserRouter as Router,
   Routes,
-  Route,
-  Navigate,
   useLocation,
 } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
-import Overview from "./studentDashboard/Overview";
-import Applications from "./studentDashboard/Applications";
-import Profile from "./studentDashboard/Profile";
-import Notifications from "./studentDashboard/Notifications";
-import Settings from "./studentDashboard/Settings";
+import { UserProvider } from "../src/contexts/userContext";
 import AdminDashboard from "./adminDashboard";
+import axios from "./api/axiosConfig";
 import LoginForm from "./components/LoginForm";
 import SignupForm from "./components/Signup";
-import axios from "./api/axiosConfig"; // Make sure this is imported
+import StudentDashboard from "./studentDashboard";
 
 const AppContent = ({
   currentUser,
@@ -43,73 +39,37 @@ const AppContent = ({
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* UPDATED: Simplified sidebar logic - only show sidebar for students now */}
-      {/* Admin dashboard now has its own internal sidebar */}
-      {currentUser && currentUser.role === "student" && (
-        <Sidebar
-          currentUser={currentUser}
-          setCurrentUser={setCurrentUser}
-          notifications={notifications}
-          onLogout={handleLogout}
-        />
-      )}
-
-      <main className={`${currentUser && currentUser.role === "student" ? "ml-64" : ""} ${currentUser && currentUser.role === "admin" ? "" : "p-6"} flex-1`}>
+    <div className="flex bg-gray-50">
+            <main
+  className={`flex-1`}
+>
+<div className="flex w-full min-h-screen">
         <Routes>
           {/* Default route - redirect based on user role */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               currentUser ? (
                 currentUser.role === "admin" ? (
                   <Navigate to="/admin" replace />
                 ) : (
-                  <Navigate to="/overview" replace />
+                  <Navigate to="/student" replace />
                 )
               ) : (
                 <Navigate to="/login" replace />
               )
-            } 
-          />
-
-          {/* Student Dashboard Routes */}
-          <Route
-            path="/overview"
-            element={
-              currentUser && currentUser.role === "student" ? (
-                <Overview
-                  currentUser={currentUser}
-                  applications={applications}
-                  notifications={notifications}
-                />
-              ) : (
-                <Navigate to="/login" replace />
-              )
             }
           />
 
+          {/* ✅ NEW: Single Student Dashboard Route */}
           <Route
-            path="/applications"
+            path="/student/*"
             element={
               currentUser && currentUser.role === "student" ? (
-                <Applications
-                  applications={applications}
-                  setApplications={setApplications}
-                />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/profile"
-            element={
-              currentUser && currentUser.role === "student" ? (
-                <Profile
+                <StudentDashboard
                   currentUser={currentUser}
                   setCurrentUser={setCurrentUser}
+                  onLogout={handleLogout}
                 />
               ) : (
                 <Navigate to="/login" replace />
@@ -117,36 +77,8 @@ const AppContent = ({
             }
           />
 
-          <Route
-            path="/notifications"
-            element={
-              currentUser && currentUser.role === "student" ? (
-                <Notifications
-                  notifications={notifications}
-                  setNotifications={setNotifications}
-                />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
 
-          <Route
-            path="/settings"
-            element={
-              currentUser && currentUser.role === "student" ? (
-                <Settings
-                  currentUser={currentUser}
-                  setCurrentUser={setCurrentUser}
-                />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          {/* UPDATED: Single Admin Dashboard Route */}
-          {/* All admin routes now handled by the AdminDashboard component internally */}
+          {/* Admin Dashboard Route */}
           <Route
             path="/admin/*"
             element={
@@ -175,11 +107,10 @@ const AppContent = ({
             path="/login"
             element={
               currentUser ? (
-                // If already logged in, redirect to appropriate dashboard
                 currentUser.role === "admin" ? (
                   <Navigate to="/admin" replace />
                 ) : (
-                  <Navigate to="/overview" replace />
+                  <Navigate to="/student" replace /> // ✅ CHANGED
                 )
               ) : (
                 <LoginForm setCurrentUser={setCurrentUser} />
@@ -191,11 +122,10 @@ const AppContent = ({
             path="/signup"
             element={
               currentUser ? (
-                // If already logged in, redirect to appropriate dashboard
                 currentUser.role === "admin" ? (
                   <Navigate to="/admin" replace />
                 ) : (
-                  <Navigate to="/overview" replace />
+                  <Navigate to="/student" replace /> // ✅ CHANGED
                 )
               ) : (
                 <SignupForm setCurrentUser={setCurrentUser} />
@@ -203,7 +133,7 @@ const AppContent = ({
             }
           />
 
-          {/* 404 Route - redirect to login if not authenticated, otherwise to dashboard */}
+          {/* 404 Catch-All */}
           <Route
             path="*"
             element={
@@ -211,7 +141,7 @@ const AppContent = ({
                 currentUser.role === "admin" ? (
                   <Navigate to="/admin" replace />
                 ) : (
-                  <Navigate to="/overview" replace />
+                  <Navigate to="/student" replace />
                 )
               ) : (
                 <Navigate to="/login" replace />
@@ -219,6 +149,7 @@ const AppContent = ({
             }
           />
         </Routes>
+        </div>
       </main>
     </div>
   );
@@ -228,94 +159,22 @@ const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [applications, setApplications] = useState([
-    // Sample application data
-    {
-      id: 1,
-      studentId: 1,
-      universityId: 1,
-      program: "Computer Science",
-      status: "pending",
-      submittedAt: "2024-01-15",
-      documents: ["transcript", "sop", "lor"]
-    },
-    {
-      id: 2,
-      studentId: 2,
-      universityId: 2,
-      program: "Business Administration",
-      status: "accepted",
-      submittedAt: "2024-01-10",
-      documents: ["transcript", "sop"]
-    }
-  ]);
+  const [applications, setApplications] = useState([]);
 
-  const [notifications, setNotifications] = useState([
-    // Sample notification data
-    {
-      id: 1,
-      title: "Application Status Update",
-      message: "Your application to MIT has been reviewed",
-      type: "info",
-      read: false,
-      timestamp: "2024-01-20"
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
-  const [students, setStudents] = useState([
-    // Sample student data
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+1234567890",
-      country: "USA",
-      gpa: 3.8,
-      status: "active",
-      joinedAt: "2024-01-01"
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      phone: "+1234567891",
-      country: "Canada",
-      gpa: 3.9,
-      status: "active",
-      joinedAt: "2024-01-05"
-    }
-  ]);
+  const [students, setStudents] = useState([]);
 
-  const [universities, setUniversities] = useState([
-    // Sample university data
-    {
-      id: 1,
-      name: "Massachusetts Institute of Technology",
-      country: "USA",
-      ranking: 1,
-      programs: ["Computer Science", "Engineering", "Business"],
-      applicationFee: 100,
-      status: "active"
-    },
-    {
-      id: 2,
-      name: "Stanford University",
-      country: "USA",
-      ranking: 2,
-      programs: ["Computer Science", "Business Administration", "Medicine"],
-      applicationFee: 125,
-      status: "active"
-    }
-  ]);
+  const [universities, setUniversities] = useState([]);
 
   // Enhanced setCurrentUser function that persists to localStorage
   const setCurrentUserWithPersistence = (userData) => {
     setCurrentUser(userData);
     if (userData) {
-      localStorage.setItem('currentUser', JSON.stringify(userData));
+      localStorage.setItem("currentUser", JSON.stringify(userData));
     } else {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('authToken');
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("authToken");
       // Clear axios authorization header
       delete axios.defaults.headers.common["Authorization"];
     }
@@ -326,43 +185,48 @@ const App = () => {
     const checkAuthStatus = async () => {
       try {
         // Check localStorage for saved user data and token
-        const savedUser = localStorage.getItem('currentUser');
-        const savedToken = localStorage.getItem('authToken');
-        
+        const savedUser = localStorage.getItem("currentUser");
+        const savedToken = localStorage.getItem("authToken");
+
         if (savedUser && savedToken) {
           const userData = JSON.parse(savedUser);
-          
+
           // Validate the saved user data
           if (userData && userData.id && userData.role) {
             // Set the authorization header for axios
-            axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
-            
+            axios.defaults.headers.common[
+              "Authorization"
+            ] = `Bearer ${savedToken}`;
+
             // Verify token with backend
             try {
-              const response = await axios.get('/auth/verify');
+              const response = await axios.get("/auth/verify");
               if (response.data.valid) {
                 // Update user data in case it changed on the server
                 const updatedUser = response.data.user;
                 setCurrentUser(updatedUser);
-                localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                localStorage.setItem(
+                  "currentUser",
+                  JSON.stringify(updatedUser)
+                );
               }
             } catch (error) {
-              console.error('Token verification failed:', error);
+              console.error("Token verification failed:", error);
               // Token is invalid, clear everything
-              localStorage.removeItem('currentUser');
-              localStorage.removeItem('authToken');
+              localStorage.removeItem("currentUser");
+              localStorage.removeItem("authToken");
               delete axios.defaults.headers.common["Authorization"];
             }
           } else {
             // Invalid user data, clear it
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('authToken');
+            localStorage.removeItem("currentUser");
+            localStorage.removeItem("authToken");
           }
         }
       } catch (error) {
-        console.error('Error loading saved user:', error);
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('authToken');
+        console.error("Error loading saved user:", error);
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("authToken");
         delete axios.defaults.headers.common["Authorization"];
       } finally {
         setIsLoading(false);
@@ -385,20 +249,22 @@ const App = () => {
   }
 
   return (
-    <Router>
-      <AppContent
-        currentUser={currentUser}
-        setCurrentUser={setCurrentUserWithPersistence}
-        applications={applications}
-        setApplications={setApplications}
-        notifications={notifications}
-        setNotifications={setNotifications}
-        students={students}
-        setStudents={setStudents}
-        universities={universities}
-        setUniversities={setUniversities}
-      />
-    </Router>
+    <UserProvider>
+      <Router>
+        <AppContent
+          currentUser={currentUser}
+          setCurrentUser={setCurrentUserWithPersistence}
+          applications={applications}
+          setApplications={setApplications}
+          notifications={notifications}
+          setNotifications={setNotifications}
+          students={students}
+          setStudents={setStudents}
+          universities={universities}
+          setUniversities={setUniversities}
+        />
+      </Router>
+    </UserProvider>
   );
 };
 
