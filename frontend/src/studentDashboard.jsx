@@ -990,10 +990,10 @@ const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
   const [applications, setApplications] = useState([]);
 
   return (
-    <div className="flex w-screen h-screen overflow-hidden">
+    <div className="flex w-full min-h-screen overflow-hidden">
       <StudentSidebar currentUser={currentUser} onLogout={onLogout} />
 
-      <main className="flex min-h-screen overflow-hidden p-6 bg-gray-50">
+      <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
 
         <Routes>
           <Route
