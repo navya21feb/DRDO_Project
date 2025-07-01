@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ApplicationForm from "./components/ApplicationForm";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -420,225 +421,42 @@ const MyApplications = ({ applications }) => {
   );
 };
 
-// Apply Now Component
-const ApplyNow = ({ onSubmitApplication }) => {
-  const [formData, setFormData] = useState({
-    labApplied: "",
-    branch: "",
-    duration: "",
-    startDate: "",
-    motivation: "",
-    experience: "",
-    skills: "",
-  });
+const ApplyNow = ({ onSubmitApplication, onCloseForm }) => {
 
-  const labs = [
-    "Artificial Intelligence Lab",
-    "Cyber Security Lab",
-    "Robotics Lab",
-    "Quantum Computing Lab",
-    "Materials Science Lab",
-    "Biotechnology Lab",
-    "Aerospace Engineering Lab",
-    "Electronics Lab",
-  ];
-
-  const branches = [
-    "Computer Science",
-    "Electronics",
-    "Mechanical",
-    "Aerospace",
-    "Chemical",
-    "Biotechnology",
-    "Physics",
-    "Mathematics",
-  ];
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = (applicationData) => {
     const newApplication = {
       id: Date.now(),
-      ...formData,
-      status: "pending",
+      ...applicationData,
+      status: 'pending',
       dateApplied: new Date().toLocaleDateString(),
-      studentName: "Current Student",
-      email: "student@example.com",
+      studentName: 'Current Student',
+      email: 'student@example.com',
     };
 
     if (onSubmitApplication) {
       onSubmitApplication(newApplication);
     }
-
-    // Reset form
-    setFormData({
-      labApplied: "",
-      branch: "",
-      duration: "",
-      startDate: "",
-      motivation: "",
-      experience: "",
-      skills: "",
-    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Apply for Lab</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Apply Now</h1>
         <p className="text-gray-600 mt-2">
-          Submit your application for a DRDO lab position
+          Submit your application for an internship position
         </p>
       </div>
 
-      {/* Application Form */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lab Applied <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.labApplied}
-                onChange={(e) =>
-                  setFormData({ ...formData, labApplied: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a lab</option>
-                {labs.map((lab) => (
-                  <option key={lab} value={lab}>
-                    {lab}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Branch <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.branch}
-                onChange={(e) =>
-                  setFormData({ ...formData, branch: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select your branch</option>
-                {branches.map((branch) => (
-                  <option key={branch} value={branch}>
-                    {branch}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Duration <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.duration}
-                onChange={(e) =>
-                  setFormData({ ...formData, duration: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select duration</option>
-                <option value="2 months">2 months</option>
-                <option value="3 months">3 months</option>
-                <option value="6 months">6 months</option>
-                <option value="1 year">1 year</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Preferred Start Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Motivation <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              required
-              rows={4}
-              value={formData.motivation}
-              onChange={(e) =>
-                setFormData({ ...formData, motivation: e.target.value })
-              }
-              placeholder="Why do you want to join this lab? What are your goals?"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Relevant Experience
-            </label>
-            <textarea
-              rows={4}
-              value={formData.experience}
-              onChange={(e) =>
-                setFormData({ ...formData, experience: e.target.value })
-              }
-              placeholder="Describe any relevant projects, internships, or research experience..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Technical Skills
-            </label>
-            <textarea
-              rows={3}
-              value={formData.skills}
-              onChange={(e) =>
-                setFormData({ ...formData, skills: e.target.value })
-              }
-              placeholder="List your technical skills, programming languages, tools, etc..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-            >
-              Save Draft
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <Send className="w-4 h-4" />
-              <span>Submit Application</span>
-            </button>
-          </div>
-        </form>
+        <ApplicationForm 
+          onSubmit={handleSubmit} 
+          onClose={onCloseForm} 
+        />
       </div>
     </div>
   );
 };
+
 
 // Student Notifications Component
 const StudentNotifications = ({ applications }) => {
