@@ -19,18 +19,12 @@ const SignupForm = ({ setCurrentUser }) => {
     setError("");
 
     try {
-      console.log("Attempting signup with:", formData);
-      
-      // 1. Signup
       const signupResponse = await axios.post("/auth/signup", formData);
-      console.log("Signup successful:", signupResponse.data);
 
-      // 2. Auto-login after signup
       const loginResponse = await axios.post("/auth/login", {
         email: formData.email,
         password: formData.password,
       });
-      console.log("Login successful:", loginResponse.data);
 
       const { token, user } = loginResponse.data;
 
@@ -41,14 +35,11 @@ const SignupForm = ({ setCurrentUser }) => {
       setCurrentUser(user);
       navigate(user.role === "admin" ? "/admin" : "/overview");
     } catch (err) {
-      console.error("Full error object:", err);
-      console.error("Error response:", err.response);
-      
-      const errorMessage = err.response?.data?.error || 
-                          err.response?.data?.message || 
-                          err.message || 
-                          "Signup failed. Please try again.";
-      
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        "Signup failed. Please try again.";
       setError(errorMessage);
       alert(errorMessage);
     } finally {
@@ -57,10 +48,10 @@ const SignupForm = ({ setCurrentUser }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 px-4">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded shadow-md w-96"
+        className="bg-white p-8 rounded shadow-md w-full max-w-md"
       >
         <h2 className="text-2xl font-bold mb-6 text-center">Create Account</h2>
 
@@ -101,7 +92,9 @@ const SignupForm = ({ setCurrentUser }) => {
 
         <select
           value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, role: e.target.value })
+          }
           className="mb-4 w-full px-4 py-2 border rounded"
         >
           <option value="student">Student</option>
@@ -115,7 +108,8 @@ const SignupForm = ({ setCurrentUser }) => {
         >
           {loading ? "Creating Account..." : "Sign Up"}
         </button>
-        <p className="mt-4 text-sm text-gray-600">
+
+        <p className="mt-4 text-sm text-gray-600 text-center">
           Already have an account?{" "}
           <a href="/login" className="text-blue-600 hover:underline">
             Log in

@@ -35,7 +35,7 @@ const AdminSidebar = ({ currentUser, onLogout }) => {
   };
 
   return (
-    <div className="w-64 bg-indigo-600 text-white min-h-screen flex flex-col">
+    <div className="min-w-[16rem] bg-indigo-600 text-white min-h-screen flex flex-col">
       {/* Logo Section */}
       <div className="p-6 border-b border-indigo-700">
         <div className="flex items-center space-x-3">
@@ -555,12 +555,12 @@ useEffect(() => {
 
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex w-full min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Admin Sidebar */}
       <AdminSidebar currentUser={currentUser} onLogout={onLogout} />
 
       {/* Main Content */}
-      <div className="flex-1 p-6">
+      <main className="flex-1 p-6 overflow-y-auto">
         <Routes>
           <Route path="/" element={
             <AdminDashboardOverview applications={applications} />
@@ -581,7 +581,7 @@ useEffect(() => {
             />
           } />
         </Routes>
-      </div>
+      </main> 
     </div>
   );
 };
