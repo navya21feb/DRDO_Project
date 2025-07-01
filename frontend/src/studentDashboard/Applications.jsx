@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, Search, Filter, Eye, FileText, Award } from 'lucide-react';
+import { Calendar, Clock, MapPin, Search, Eye, FileText, Award, Upload } from 'lucide-react';
 
 const Applications = ({ applications, setApplications }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -19,9 +20,11 @@ const Applications = ({ applications, setApplications }) => {
 
   const filteredApplications = applications.filter(app => {
     const matchesSearch = (app.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                      (app.department?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                      (app.location?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+                          (app.department?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                          (app.location?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
+    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const statusCounts = {
@@ -33,6 +36,26 @@ const Applications = ({ applications, setApplications }) => {
     'Rejected': applications.filter(app => app.status === 'Rejected').length,
   };
 
+  const handleApplicationSubmit = (applicationData) => {
+    const newApplication = {
+      id: applications.length + 1,
+      title: applicationData.position,
+      department: 'DRDO',
+      location: 'Delhi, India',
+      duration: '6 months',
+      status: 'Applied',
+      appliedDate: new Date().toISOString().split('T')[0],
+      stipend: '₹25,000/month',
+      description: `Internship opportunity in ${applicationData.position} at Defence Research and Development Organisation`,
+      requirements: applicationData.position === 'Software Development Intern (SDI)' 
+        ? ['Python', 'Java', 'Data Structures', 'Algorithms']
+        : applicationData.position === 'Cybersecurity Intern'
+        ? ['Network Security', 'Ethical Hacking', 'Cryptography', 'Risk Assessment']
+        : ['Machine Learning', 'Deep Learning', 'Python', 'TensorFlow', 'Data Analysis']
+    };
+    setApplications([...applications, newApplication]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -41,9 +64,11 @@ const Applications = ({ applications, setApplications }) => {
           <h2 className="text-2xl font-bold text-gray-800">My Applications</h2>
           <p className="text-gray-600">Track and manage your internship applications</p>
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+        <button 
+          onClick={() => setShowApplicationForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          Browse New Opportunities
+          Apply for DRDO Internship
         </button>
       </div>
 
@@ -95,59 +120,63 @@ const Applications = ({ applications, setApplications }) => {
 
       {/* Applications List */}
       <div className="grid gap-4">
-        {filteredApplications.map(app => (
-          <div key={app.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">{app.title}</h3>
-                <p className="text-gray-600 mb-2">{app.department}</p>
-                <p className="text-sm text-gray-500 mb-3">{app.description}</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(app.status)}`}>
-                {app.status}
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4 text-gray-600">
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" />
-                {app.location}
-              </div>
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2" />
-                {app.duration}
-              </div>
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2" />
-                Applied: {app.appliedDate}
-              </div>
-              <div className="flex items-center">
-                <Award className="h-4 w-4 mr-2" />
-                {app.stipend}
-              </div>
-            </div>
+        {filteredApplications.map(app => {
+          const safeRequirements = Array.isArray(app.requirements) ? app.requirements : [];
 
-            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-              <div className="flex flex-wrap gap-1">
-                {app.requirements.slice(0, 3).map(req => (
-                  <span key={req} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
-                    {req}
-                  </span>
-                ))}
-                {app.requirements.length > 3 && (
-                  <span className="text-gray-500 text-xs">+{app.requirements.length - 3} more</span>
-                )}
+          return (
+            <div key={app.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">{app.title}</h3>
+                  <p className="text-gray-600 mb-2">{app.department}</p>
+                  <p className="text-sm text-gray-500 mb-3">{app.description}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(app.status)}`}>
+                  {app.status}
+                </span>
               </div>
-              <button 
-                onClick={() => setSelectedApplication(app)}
-                className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-              >
-                <Eye className="h-4 w-4" />
-                View Details
-              </button>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4 text-gray-600">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  {app.location}
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  {app.duration}
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Applied: {app.appliedDate}
+                </div>
+                <div className="flex items-center">
+                  <Award className="h-4 w-4 mr-2" />
+                  {app.stipend}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                <div className="flex flex-wrap gap-1">
+                  {safeRequirements.slice(0, 3).map(req => (
+                    <span key={req} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
+                      {req}
+                    </span>
+                  ))}
+                  {safeRequirements.length > 3 && (
+                    <span className="text-gray-500 text-xs">+{safeRequirements.length - 3} more</span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setSelectedApplication(app)}
+                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                >
+                  <Eye className="h-4 w-4" />
+                  View Details
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredApplications.length === 0 && (
@@ -206,7 +235,7 @@ const Applications = ({ applications, setApplications }) => {
                 <div>
                   <h3 className="font-medium mb-2">Requirements</h3>
                   <div className="flex flex-wrap gap-2">
-                    {selectedApplication.requirements.map(req => (
+                    {(selectedApplication.requirements || []).map(req => (
                       <span key={req} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
                         {req}
                       </span>
@@ -230,7 +259,116 @@ const Applications = ({ applications, setApplications }) => {
           </div>
         </div>
       )}
+
+      {/* Application Form Modal */}
+      {showApplicationForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-xl max-w-2xl w-full space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold">Apply for DRDO Internship</h2>
+
+            <ApplicationForm 
+              onSubmit={handleApplicationSubmit}
+              onClose={() => setShowApplicationForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
+
+// Application Form Component
+const ApplicationForm = ({ onSubmit, onClose }) => {
+  const [applicationData, setApplicationData] = useState({
+    position: '',
+    coverLetter: '',
+    expectedStartDate: '',
+    documents: []
+  });
+
+  const handleFileChange = (e) => {
+    setApplicationData({
+      ...applicationData,
+      documents: Array.from(e.target.files)
+    });
+  };
+
+  const handleSubmit = () => {
+    if (!applicationData.position || !applicationData.coverLetter || !applicationData.expectedStartDate) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    onSubmit(applicationData);
+    onClose();
+  };
+
+  return (
+    <>
+      <select 
+        value={applicationData.position} 
+        onChange={e => setApplicationData({ ...applicationData, position: e.target.value })}
+        className="w-full border rounded px-3 py-2"
+        required
+      >
+        <option value="">Select Position *</option>
+        <option value="Software Development Intern (SDI)">Software Development Intern (SDI)</option>
+        <option value="Cybersecurity Intern">Cybersecurity Intern</option>
+        <option value="AI/ML Intern">AI/ML Intern</option>
+      </select>
+
+      <textarea 
+        rows="4" 
+        placeholder="Cover Letter - Tell us why you're interested in this position and what makes you a good fit *"
+        className="w-full border rounded px-3 py-2"
+        value={applicationData.coverLetter}
+        onChange={e => setApplicationData({ ...applicationData, coverLetter: e.target.value })}
+        required
+      />
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Expected Start Date *</label>
+        <input 
+          type="date" 
+          className="w-full border rounded px-3 py-2"
+          value={applicationData.expectedStartDate}
+          onChange={e => setApplicationData({ ...applicationData, expectedStartDate: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="border border-dashed border-gray-300 p-4 text-center rounded">
+        <Upload className="mx-auto text-gray-500 mb-2" size={24} />
+        <p className="text-sm text-gray-600 mb-2">Upload documents (Resume, Cover Letter, Certificates)</p>
+        <p className="text-xs text-gray-500 mb-2">PDF files only, max 5MB each</p>
+        <input 
+          type="file" 
+          multiple 
+          accept=".pdf" 
+          onChange={handleFileChange}
+          className="w-full"
+        />
+        {applicationData.documents.length > 0 && (
+          <p className="text-sm text-green-600 mt-2">
+            {applicationData.documents.length} file(s) selected
+          </p>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4">
+        <button 
+          onClick={onClose} 
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+        >
+          Cancel
+        </button>
+        <button 
+          onClick={handleSubmit} 
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          Submit Application
+        </button>
+      </div>
+    </>
   );
 };
 
