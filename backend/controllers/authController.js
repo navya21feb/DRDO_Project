@@ -77,4 +77,9 @@ exports.authenticateToken = (req, res, next) => {
   });
 };
 
+exports.updateProfile = async (req, res) => {
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, req.body, { new: true });
+  res.json({ updatedUser });
+};
+
 
