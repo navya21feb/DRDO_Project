@@ -12,26 +12,20 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(cors());
+app.use(express.json()); // Add this for JSON parsing
+app.use(express.urlencoded({ extended: true })); // Add this for form data
 
-// Conditional body parsing middleware
-const conditionalJsonParser = (req, res, next) => {
-  // Only parse JSON for specific routes that need it
-  if (req.path.includes('/status') || req.method === 'PUT' || req.method === 'PATCH') {
-    return express.json()(req, res, next);
-  }
-  next();
-};
-
+// Serve static files for resume downloads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
+const userRoutes = require('./routes/userRoutes');
 
-// For /auth routes (they use JSON)
-app.use('/api/auth', express.json(), authRoutes);
-
-// For /applications routes (conditional parsing)
-app.use('/api/applications', conditionalJsonParser, applicationRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // Root route
 app.get("/", (req, res) => {
