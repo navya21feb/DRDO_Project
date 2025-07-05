@@ -20,8 +20,10 @@ app.use(express.json());
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/applications', applicationRoutes);
 
 // Root route

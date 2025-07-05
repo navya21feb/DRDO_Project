@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController'); // Adjust path as needed
+const authController = require('../controllers/authController'); 
+const { register, login, verifyToken, authenticateToken } = require('../controllers/authController');
+const { updateProfile } = require('../controllers/userController');
 
 // Existing routes
 router.post('/signup', authController.register);
 router.post('/login', authController.login);
-
-// NEW: Token verification route
 router.get('/verify', authController.authenticateToken, authController.verifyToken);
+
 
 module.exports = router;
