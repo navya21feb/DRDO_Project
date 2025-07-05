@@ -2,24 +2,18 @@ const User = require('../models/User');
 
 exports.updateProfile = async (req, res) => {
   try {
-    // Prepare the update fields safely
-    const updateData = {
-      ...req.body,
-      profileCompleted: true, // ✅ Always mark profile as completed when updating
-    };
+    const { id } = req.user; // coming from token
+    const updates = req.body;
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    ).select('-password'); // Exclude password
+    const updatedUser = await User.findByIdAndUpdate(id, updates, {
+      new: true,
+    });
 
-    res.json({ updatedUser, message: "Profile updated and marked as completed!" });
+    res.json({
+      success: true,
+      user: updatedUser
+    });
   } catch (error) {
-    console.error("Update error:", error);
-    res.status(500).json({ error: "Failed to update profile" });
+    res.status(500).json({ success: false, message: "Failed to update profile", error });
   }
 };

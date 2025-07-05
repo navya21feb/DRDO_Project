@@ -6,11 +6,16 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: { type: String },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
+  phone: { type: String },
+  branch: { type: String },
+  cgpa: { type: String },
+  year: { type: String },
+  university: { type: String },
+  location: { type: String },
   profileCompleted: { type: Boolean, default: false },
   dashboardData: {
     marks: { type: Number, default: 0 },
     attendance: { type: Number, default: 0 }
-    // add more fields as needed
   }
 });
 

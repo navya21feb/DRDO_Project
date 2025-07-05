@@ -7,24 +7,34 @@ export const UserProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+const fetchUser = async () => {
   const token = localStorage.getItem('token');
   const savedUser = localStorage.getItem('currentUser');
+
+  const safeParse = (str) => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return null;
+    }
+  };
 
   if (!token && !savedUser) {
     setLoading(false);
     return;
   }
 
-  if (savedUser) {
-    setCurrentUser(JSON.parse(savedUser));
+  const parsedUser = safeParse(savedUser);
+
+  if (parsedUser) {
+    setCurrentUser(parsedUser);
   } else {
     try {
       const res = await axios.get('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setCurrentUser(res.data.user);
-      localStorage.setItem('currentUser', JSON.stringify(res.data.user)); // ✅ Save backend version too
+      localStorage.setItem('currentUser', JSON.stringify(res.data.user));
     } catch (err) {
       console.error("Auth verification failed:", err);
       setCurrentUser(null);
@@ -33,6 +43,7 @@ export const UserProvider = ({ children }) => {
 
   setLoading(false);
 };
+
   useEffect(() => {
     fetchUser();
   }, []);

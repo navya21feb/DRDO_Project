@@ -836,12 +836,17 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...currentUser });
 
-const handleSave = () => {
-  const updatedUser = { ...currentUser, ...formData };
-  setCurrentUser(updatedUser); 
-  localStorage.setItem('currentUser', JSON.stringify(updatedUser)); 
-  setIsEditing(false);
-};
+  const handleSave = async () => {
+    const updatedUser = { ...currentUser, ...formData };
+
+    try {
+      setCurrentUser(updatedUser);
+    } catch (error) {
+      // Optional: handle errors
+    }
+
+    setIsEditing(false);
+  };
 
   useEffect(() => {
     setFormData({ ...currentUser });
@@ -858,80 +863,25 @@ const handleSave = () => {
   };
 
   const fieldConfig = [
-    {
-      label: "Full Name",
-      key: "name",
-      placeholder: "e.g. Shreya Gupta",
-      icon: User,
-      required: true,
-    },
-    {
-      label: "Email",
-      key: "email",
-      placeholder: "e.g. shreya@example.com",
-      icon: Mail,
-      type: "email",
-      required: true,
-    },
-    {
-      label: "Phone",
-      key: "phone",
-      placeholder: "e.g. 9876543210",
-      icon: Phone,
-      type: "tel",
-    },
-    {
-      label: "University",
-      key: "university",
-      placeholder: "e.g. IGDTUW",
-      icon: Building,
-      required: true,
-    },
-    {
-      label: "Branch",
-      key: "branch",
-      placeholder: "e.g. Computer Science",
-      icon: GraduationCap,
-      required: true,
-    },
-    {
-      label: "Year",
-      key: "year",
-      type: "select",
-      icon: Calendar,
-      options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"],
-      required: true,
-    },
-    {
-      label: "CGPA",
-      key: "cgpa",
-      placeholder: "e.g. 9.1",
-      icon: Award,
-      type: "number",
-      step: "0.1",
-      min: "0",
-      max: "10",
-    },
-    {
-      label: "Location",
-      key: "location",
-      placeholder: "e.g. New Delhi",
-      icon: MapPin,
-    },
+    { label: "Full Name", key: "name", placeholder: "e.g. Shreya Gupta", icon: User, required: true },
+    { label: "Email", key: "email", placeholder: "e.g. shreya@example.com", icon: Mail, type: "email", required: true },
+    { label: "Phone", key: "phone", placeholder: "e.g. 9876543210", icon: Phone, type: "tel" },
+    { label: "University", key: "university", placeholder: "e.g. IGDTUW", icon: Building, required: true },
+    { label: "Branch", key: "branch", placeholder: "e.g. Computer Science", icon: GraduationCap, required: true },
+    { label: "Year", key: "year", type: "select", icon: Calendar, options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"], required: true },
+    { label: "CGPA", key: "cgpa", placeholder: "e.g. 9.1", icon: Award, type: "number", step: "0.1", min: "0", max: "10" },
+    { label: "Location", key: "location", placeholder: "e.g. New Delhi", icon: MapPin },
   ];
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 overflow-y-auto">
       <div className="mx-auto">
-        {/* Main Profile Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Header Section with Gradient */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
 
             <div className="relative flex items-center space-x-6">
-              {/* Profile Picture */}
               <div className="relative group">
                 <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30 shadow-lg">
                   <span className="text-2xl font-bold text-white">
@@ -945,20 +895,12 @@ const handleSave = () => {
                 )}
               </div>
 
-              {/* Profile Info */}
               <div className="text-white">
-                <h2 className="text-3xl font-bold mb-1">
-                  {formData.name || "Your Name"}
-                </h2>
-                <p className="text-white/90 text-lg mb-1">
-                  {formData.branch || "Your Branch"} Student
-                </p>
-                <p className="text-white/70 text-sm">
-                  {formData.university || "Your University"}
-                </p>
+                <h2 className="text-3xl font-bold mb-1">{formData.name || "Your Name"}</h2>
+                <p className="text-white/90 text-lg mb-1">{formData.branch || "Your Branch"} Student</p>
+                <p className="text-white/70 text-sm">{formData.university || "Your University"}</p>
               </div>
 
-              {/* Edit Button */}
               <div className="ml-auto">
                 {!isEditing ? (
                   <button
@@ -993,86 +935,67 @@ const handleSave = () => {
             </div>
           </div>
 
-          {/* Form Section */}
           <div className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {fieldConfig.map(
-                ({
-                  label,
-                  key,
-                  placeholder,
-                  icon: Icon,
-                  type,
-                  options,
-                  required,
-                  ...inputProps
-                }) => (
-                  <div key={key} className="group">
-                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-3">
-                      <Icon size={16} className="text-gray-500" />
-                      <span>{label}</span>
-                      {required && <span className="text-red-500">*</span>}
-                    </label>
+              {fieldConfig.map(({ label, key, placeholder, icon: Icon, type, options, required, ...inputProps }) => (
+                <div key={key} className="group">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-3">
+                    <Icon size={16} className="text-gray-500" />
+                    <span>{label}</span>
+                    {required && <span className="text-red-500">*</span>}
+                  </label>
 
-                    {isEditing ? (
-                      <div className="relative">
-                        {type === "select" ? (
-                          <select
-                            value={formData[key] || ""}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [key]: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
-                          >
-                            <option value="" disabled>
-                              Select {label}
-                            </option>
-                            {options.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type={type || "text"}
-                            value={formData[key] || ""}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [key]: e.target.value,
-                              })
-                            }
-                            placeholder={placeholder}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
-                            {...inputProps}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-100 rounded-xl p-4 border-2 border-transparent hover:border-gray-200 transition-all duration-200">
-                        <p
-                          className={`text-sm ${
-                            formData[key]
-                              ? "text-gray-900 font-medium"
-                              : "text-gray-400 italic"
-                          }`}
+                  {isEditing ? (
+                    <div className="relative">
+                      {type === "select" ? (
+                        <select
+                          value={formData[key] || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              [key]: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
                         >
-                          {formData[key] || placeholder}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )
-              )}
+                          <option value="" disabled>
+                            Select {label}
+                          </option>
+                          {options.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={type || "text"}
+                          value={formData[key] || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              [key]: e.target.value,
+                            })
+                          }
+                          placeholder={placeholder}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
+                          {...inputProps}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-100 rounded-xl p-4 border-2 border-transparent hover:border-gray-200 transition-all duration-200">
+                      <p className={`text-sm ${formData[key] ? "text-gray-900 font-medium" : "text-gray-400 italic"}`}>
+                        {formData[key] || placeholder}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="text-center mt-8 text-gray-500 text-sm">
           <p>Keep your profile updated to get the best experience</p>
         </div>
@@ -1080,6 +1003,7 @@ const handleSave = () => {
     </div>
   );
 };
+
 
 const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
   const [applications, setApplications] = useState(

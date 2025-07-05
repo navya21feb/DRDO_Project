@@ -21,50 +21,71 @@ const App = () => {
   const [students, setStudents] = useState([]);
   const [universities, setUniversities] = useState([]);
 
-  // ✅ Enhanced setter
-  const setCurrentUserWithPersistence = (userData) => {
-    setCurrentUser(userData);
-    if (userData) {
-      localStorage.setItem("currentUser", JSON.stringify(userData));
-    } else {
-      localStorage.removeItem("currentUser");
-      localStorage.removeItem("authToken");
-      delete axios.defaults.headers.common["Authorization"];
+  // ✅ Safe JSON parse helper
+  const safeParse = (str) => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return {};
     }
   };
 
+  // ✅ Enhanced setter with debug logs
+const setCurrentUserWithPersistence = (userData) => {
+  setCurrentUser(userData);
+
+  if (userData) {
+    localStorage.setItem("currentUser", JSON.stringify(userData));
+  } else {
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("authToken");
+    delete axios.defaults.headers.common["Authorization"];
+  }
+};
+
+
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const savedUser = localStorage.getItem("currentUser");
-        const savedToken = localStorage.getItem("authToken");
+  const checkAuthStatus = async () => {
+    try {
+      const savedUser = localStorage.getItem("currentUser");
+      const savedToken = localStorage.getItem("authToken");
 
-        if (savedUser && savedToken) {
-          const userData = JSON.parse(savedUser);
-          if (userData?.id && userData?.role) {
-            axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
+      if (savedUser && savedToken) {
+        const userData = JSON.parse(savedUser);
 
-            try {
-              const response = await axios.get("/auth/verify");
-              if (response.data.valid) {
-                const updatedUser = response.data.user;
-                setCurrentUser(updatedUser);
-                localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-              }
-            } catch {
-              localStorage.removeItem("currentUser");
-              localStorage.removeItem("authToken");
-              delete axios.defaults.headers.common["Authorization"];
+        if (userData?.id && userData?.role) {
+          axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
+
+          try {
+            const response = await axios.get("/auth/verify");
+
+            if (response.data.valid) {
+              const updatedUser = response.data.user;
+              const mergedUser = { ...userData, ...updatedUser };
+              setCurrentUser(mergedUser);
+              localStorage.setItem("currentUser", JSON.stringify(mergedUser));
             }
+          } catch {
+            localStorage.removeItem("currentUser");
+            localStorage.removeItem("authToken");
+            delete axios.defaults.headers.common["Authorization"];
           }
         }
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch {
+      // Silently fail
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    checkAuthStatus();
-  }, []);
+  checkAuthStatus();
+}, []);
+
+useEffect(() => {
+  // Update happens silently
+}, [currentUser]);
+
 
   if (isLoading) {
     return (
@@ -188,6 +209,7 @@ const App = () => {
       </div>
     );
   };
+
 
   return (
     <UserProvider>
