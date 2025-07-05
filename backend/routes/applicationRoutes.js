@@ -3,12 +3,27 @@ const router = express.Router();
 const {
   createApplication,
   getAllApplications,
-  updateStatus
+  getApplication,
+  updateStatus,
+  getStudentApplications,
+  getResume
 } = require('../controllers/applicationController');
-const authMiddleware = require('../middlewares/authMiddleware');
 
-router.post('/', authMiddleware, createApplication);
+const authMiddleware = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/multer');
+
+// ✅ Application Creation - now accepts ONLY 1 resume
+router.post('/', upload.single('resume'), authMiddleware, createApplication);
+
+// Admin Routes
 router.get('/', authMiddleware, getAllApplications);
+router.get('/:id', authMiddleware, getApplication);
 router.put('/:id/status', authMiddleware, updateStatus);
+
+// Student Routes
+router.get('/student/mine', authMiddleware, getStudentApplications);
+
+// ✅ Serve uploaded resume
+router.get('/resume/:filename', getResume);
 
 module.exports = router;

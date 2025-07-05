@@ -1,30 +1,71 @@
 import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
+import axios from '../api/axiosConfig';
+const baseURL = import.meta.env.VITE_BACKEND_URL;
+
 
 const ApplicationForm = ({ onSubmit, onClose }) => {
   const [applicationData, setApplicationData] = useState({
-    position: '',
-    coverLetter: '',
-    expectedStartDate: '',
-    documents: []
+  position: '',
+  coverLetter: '',
+  expectedStartDate: '',
+  resume: null  // ✅ Only resume
+});
+
+const handleFileChange = (e) => {
+  setApplicationData({
+    ...applicationData,
+    resume: e.target.files[0]  // ✅ Single file only
   });
+};
 
-  const handleFileChange = (e) => {
-    setApplicationData({
-      ...applicationData,
-      documents: Array.from(e.target.files)
+const handleSubmit = async () => {
+  const { position, coverLetter, expectedStartDate, resume } = applicationData;
+
+  if (!position || !coverLetter || !expectedStartDate || !resume) {
+    alert('Please fill in all required fields and upload a resume.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('position', position);
+  formData.append('coverLetter', coverLetter);
+  formData.append('expectedStartDate', expectedStartDate);
+  formData.append('resume', resume); // ✅ Upload resume
+
+  try {
+    const token = localStorage.getItem('authToken');
+    await axios.post(`${baseURL}/applications`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
     });
-  };
 
-  const handleSubmit = () => {
-    if (!applicationData.position || !applicationData.coverLetter || !applicationData.expectedStartDate) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    onSubmit(applicationData);
-    onClose();
-  };
+    alert('Application submitted successfully!');
+    const response = await axios.get(`${baseURL}/applications/student/mine`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
+    onSubmit(response.data);
+    setApplicationData({
+      position: '',
+      coverLetter: '',
+      expectedStartDate: '',
+      resume: null
+    });
+    if (onClose) onClose();
+
+  } catch (error) {
+    console.error('Submission error:', error);
+    alert('You will be informed about the status of your application.');
+  }
+};
+
+
+ 
   return (
     <>
       <select 
@@ -65,14 +106,13 @@ const ApplicationForm = ({ onSubmit, onClose }) => {
         <p className="text-xs text-gray-500 mb-2">PDF files only, max 5MB each</p>
         <input 
           type="file" 
-          multiple 
           accept=".pdf" 
           onChange={handleFileChange}
           className="w-full"
         />
-        {applicationData.documents.length > 0 && (
+        {applicationData.resume && (
           <p className="text-sm text-green-600 mt-2">
-            {applicationData.documents.length} file(s) selected
+            {applicationData.resume.name} selected
           </p>
         )}
       </div>

@@ -69,8 +69,11 @@ const AppContent = ({
                 <StudentDashboard
                   currentUser={currentUser}
                   setCurrentUser={setCurrentUser}
+                  applications={applications}                  // ✅ NEW
+                  setApplications={setApplications}            // ✅ NEW
                   onLogout={handleLogout}
                 />
+
               ) : (
                 <Navigate to="/login" replace />
               )

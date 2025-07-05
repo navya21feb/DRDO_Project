@@ -2,27 +2,36 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
+const app = express();
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("✅ MongoDB connected successfully"))
 .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-const app = express();
-
 // Middleware
 app.use(cors());
-app.use(express.json());
+
+// Conditional body parsing middleware
+const conditionalJsonParser = (req, res, next) => {
+  // Only parse JSON for specific routes that need it
+  if (req.path.includes('/status') || req.method === 'PUT' || req.method === 'PATCH') {
+    return express.json()(req, res, next);
+  }
+  next();
+};
+
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
 
-app.use('/api/auth', authRoutes);
-app.use('/api/applications', applicationRoutes);
+// For /auth routes (they use JSON)
+app.use('/api/auth', express.json(), authRoutes);
+
+// For /applications routes (conditional parsing)
+app.use('/api/applications', conditionalJsonParser, applicationRoutes);
 
 // Root route
 app.get("/", (req, res) => {
@@ -42,4 +51,9 @@ app.listen(PORT, () => {
   console.log(`   POST http://localhost:${PORT}/api/auth/signup`);
   console.log(`   POST http://localhost:${PORT}/api/auth/login`);
   console.log(`   GET  http://localhost:${PORT}/api/applications`);
+  console.log(`   GET  http://localhost:${PORT}/api/applications/student/mine`);
+  console.log(`   POST http://localhost:${PORT}/api/applications`);
+  console.log(`   GET  http://localhost:${PORT}/api/applications/:id`);
+  console.log(`   GET  http://localhost:${PORT}/api/applications/resume/:filename`);
+  console.log(`   PUT  http://localhost:${PORT}/api/applications/:id/status`);
 });

@@ -1,12 +1,10 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000/api"; // Adjust if deployed
-
 const axiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: import.meta.env.VITE_BACKEND_URL, // ✅ use env variable
 });
 
-// Attach token to every request if it exists
+// ✅ Automatically attach token to headers
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem("authToken");
   if (token) {

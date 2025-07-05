@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ApplicationForm from "./components/ApplicationForm";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import axios from './api/axiosConfig'; // adjust path if needed
+// import { baseURL } from './api/axiosConfig'; // Add this import at the top
 import {
   LayoutDashboard,
   FileText,
@@ -422,20 +424,8 @@ const MyApplications = ({ applications }) => {
 };
 
 const ApplyNow = ({ onSubmitApplication, onCloseForm }) => {
-
-  const handleSubmit = (applicationData) => {
-    const newApplication = {
-      id: Date.now(),
-      ...applicationData,
-      status: 'pending',
-      dateApplied: new Date().toLocaleDateString(),
-      studentName: 'Current Student',
-      email: 'student@example.com',
-    };
-
-    if (onSubmitApplication) {
-      onSubmitApplication(newApplication);
-    }
+  const handleApplicationSubmit = (updatedApplications) => {
+    onSubmitApplication(updatedApplications);  // ✅ updates dashboard
   };
 
   return (
@@ -449,8 +439,8 @@ const ApplyNow = ({ onSubmitApplication, onCloseForm }) => {
 
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <ApplicationForm 
-          onSubmit={handleSubmit} 
-          onClose={onCloseForm} 
+          onSubmit={handleApplicationSubmit} 
+          onClose={onCloseForm}
         />
       </div>
     </div>
@@ -804,8 +794,26 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
   );
 };
 
-const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
-  const [applications, setApplications] = useState([]);
+const StudentDashboard = ({ currentUser, setCurrentUser, applications, setApplications, onLogout }) => {
+  
+  useEffect(() => {
+  const fetchApplications = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await axios.get(`${baseURL}/applications/student/mine`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setApplications(response.data);
+    } catch (error) {
+      console.error("Error fetching student applications:", error);
+    }
+  };
+
+  // Fetch applications on component mount and when applications state changes
+  fetchApplications();
+}, []); // Changed dependency to setApplications // ✅ dependency to prevent infinite calls
 
   return (
     <div className="flex w-full min-h-screen overflow-hidden">
@@ -831,10 +839,9 @@ const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
             path="/apply"
             element={
               <ApplyNow
-                onSubmitApplication={(newApp) =>
-                  setApplications((prev) => [newApp, ...prev])
-                }
-              />
+                onSubmitApplication={(updatedApps) =>
+                  setApplications(updatedApps)
+                }/>
             }
           />
           <Route

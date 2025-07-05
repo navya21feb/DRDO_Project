@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import axios from './api/axiosConfig'; 
+const baseURL = import.meta.env.VITE_BACKEND_URL;
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,11 +13,12 @@ import {
   Check,
   X,
   Clock,
-  Plus
+  Plus,
+  RefreshCw
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-// Admin Sidebar Component
+// Admin Sidebar Component (unchanged)
 const AdminSidebar = ({ currentUser, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -100,7 +103,8 @@ const AdminSidebar = ({ currentUser, onLogout }) => {
 const AdminDashboardOverview = ({ applications }) => {
   // Calculate application statistics
   const stats = applications.reduce((acc, app) => {
-    acc[app.status] = (acc[app.status] || 0) + 1;
+    const status = app.status === 'on hold' ? 'hold' : app.status;
+    acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
 
@@ -180,20 +184,20 @@ const AdminDashboardOverview = ({ applications }) => {
           </div>
           <div className="space-y-4">
             {applications.slice(0, 5).map((app) => (
-              <div key={app.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={app._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">{app.studentName}</p>
                   <p className="text-sm text-gray-600">{app.email}</p>
-                  <p className="text-sm text-gray-500">{app.labApplied} - {app.branch}</p>
+                  <p className="text-sm text-gray-500">{app.position}</p>
                 </div>
                 <div className="text-right">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                     app.status === 'approved' ? 'bg-green-100 text-green-800' :
                     app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    app.status === 'hold' ? 'bg-gray-100 text-gray-800' :
+                    app.status === 'on hold' ? 'bg-gray-100 text-gray-800' :
                     'bg-red-100 text-red-800'
                   }`}>
-                    {app.status}
+                    {app.status === 'on hold' ? 'hold' : app.status}
                   </span>
                   <p className="text-xs text-gray-500 mt-1">{app.dateApplied}</p>
                 </div>
@@ -206,24 +210,121 @@ const AdminDashboardOverview = ({ applications }) => {
   );
 };
 
-// Applications Management Component
+// Applications Management Component (with critical fixes)
 const ApplicationsManagement = ({ applications, setApplications }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const filteredApplications = applications.filter(app => {
-    const matchesSearch = app.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.labApplied.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    const frontendStatus = app.status === 'on hold' ? 'hold' : app.status;
+    const matchesSearch = (
+      app.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.position?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const matchesStatus = (
+      statusFilter === 'all' || 
+      frontendStatus === statusFilter
+    );
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = (appId, newStatus) => {
-    setApplications(prev => prev.map(app => 
-      app.id === appId ? { ...app, status: newStatus } : app
-    ));
+  const handleStatusChange = async (appId, newStatus) => {
+  try {
+    const token = localStorage.getItem("authToken");
+    
+    if (!token) {
+      alert("Authentication token not found. Please log in again.");
+      return;
+    }
+
+    // Status mapping to ensure backend compatibility
+    const statusMap = {
+      'hold': 'on hold',
+      'approved': 'approved',
+      'rejected': 'rejected',
+      'pending': 'pending'
+    };
+    
+    const backendStatus = statusMap[newStatus] || newStatus;
+    const payload = { status: backendStatus };
+
+    console.log('Status update request:', {
+      appId,
+      frontendStatus: newStatus,
+      backendStatus,
+      payload,
+      url: `${baseURL}/applications/${appId}/status`
+    });
+
+    const response = await axios.put(
+      `${baseURL}/applications/${appId}/status`,
+      payload, // Send as plain object, not JSON.stringify
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('Status update response:', response.data);
+
+    // Update local state
+    setApplications(prev => 
+      prev.map(app => 
+        app._id === appId ? { 
+          ...app, 
+          status: response.data.application?.status || backendStatus
+        } : app
+      )
+    );
+
+    alert(`Status updated to "${backendStatus}" successfully!`);
+
+  } catch (error) {
+    console.error("Status update failed:", {
+      error: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.config?.data,
+        headers: error.config?.headers
+      }
+    });
+    
+    const errorMessage = error.response?.data?.error || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Unknown error occurred';
+    
+    alert(`Failed to update status: ${errorMessage}`);
+  }
+};
+
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem("authToken");
+      const response = await axios.get(`${baseURL}/applications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApplications(response.data);
+    } catch (error) {
+      setError("Failed to refresh applications");
+      console.error("Refresh error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) return <div className="p-6">Loading applications...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
     <div className="space-y-6">
@@ -240,24 +341,34 @@ const ApplicationsManagement = ({ applications, setApplications }) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              placeholder="Search students, emails, or labs..."
+              placeholder="Search students, emails, or positions..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        <select
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="hold">On Hold</option>
-          <option value="rejected">Rejected</option>
-        </select>
+        <div className="flex gap-2">
+          <select
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="hold">On Hold</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button
+            onClick={handleRefresh}
+            className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+            disabled={loading}
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Applications Table */}
@@ -267,62 +378,82 @@ const ApplicationsManagement = ({ applications, setApplications }) => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lab Applied</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resume</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Applied</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredApplications.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{app.studentName}</div>
-                      <div className="text-sm text-gray-500">{app.email}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{app.labApplied}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{app.branch}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{app.dateApplied}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      app.status === 'hold' ? 'bg-gray-100 text-gray-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {app.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleStatusChange(app.id, 'approved')}
-                        className="text-green-600 hover:text-green-900 p-1 rounded"
-                        title="Approve"
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleStatusChange(app.id, 'hold')}
-                        className="text-yellow-600 hover:text-yellow-900 p-1 rounded"
-                        title="Put on Hold"
-                      >
-                        <Clock size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleStatusChange(app.id, 'rejected')}
-                        className="text-red-600 hover:text-red-900 p-1 rounded"
-                        title="Reject"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+              {filteredApplications.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                    No applications found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredApplications.map((app) => (
+                  <tr key={app._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{app.studentName}</div>
+                        <div className="text-sm text-gray-500">{app.email}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{app.position}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {app.resume ? (
+                        <button
+                          onClick={() => window.open(`${baseURL}/applications/resume/${app.resume}`, '_blank')}
+                          className="text-blue-600 hover:text-blue-900 underline flex items-center gap-1"
+                        >
+                          <FileText size={16} />
+                          View Resume
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">No resume</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{app.dateApplied}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        app.status === 'on hold' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {app.status === 'on hold' ? 'hold' : app.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleStatusChange(app._id, 'approved')}
+                          className="text-green-600 hover:text-green-900 p-1 rounded"
+                          title="Approve"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(app._id, 'hold')}
+                          className="text-yellow-600 hover:text-yellow-900 p-1 rounded"
+                          title="Put on Hold"
+                        >
+                          <Clock size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(app._id, 'rejected')}
+                          className="text-red-600 hover:text-red-900 p-1 rounded"
+                          title="Reject"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -354,7 +485,7 @@ const AdminNotifications = ({ applications }) => {
           ) : (
             <div className="space-y-4">
               {newApplications.map((app) => (
-                <div key={app.id} className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <div key={app._id} className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
                   <div className="flex-shrink-0">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                       <Bell className="w-5 h-5 text-blue-600" />
@@ -363,7 +494,7 @@ const AdminNotifications = ({ applications }) => {
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">New Application Received</h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      <strong>{app.studentName}</strong> ({app.email}) has applied for <strong>{app.labApplied}</strong> lab in {app.branch} branch.
+                      <strong>{app.studentName}</strong> ({app.email}) has applied for <strong>{app.position}</strong> position.
                     </p>
                     <p className="text-xs text-gray-500 mt-2">Applied on {app.dateApplied}</p>
                   </div>
@@ -516,64 +647,66 @@ const AdminProfile = ({ currentUser, setCurrentUser }) => {
   );
 };
 
-// Main Admin Dashboard Component
 const AdminDashboard = ({
   currentUser,
   setCurrentUser,
-  students,
-  setStudents,
-  applications: originalApplications,
-  setApplications: setOriginalApplications,
-  universities,
-  setUniversities,
-  notifications,
-  setNotifications,
   onLogout
 }) => {
   const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const baseURL = import.meta.env.VITE_BACKEND_URL;
-
-useEffect(() => {
-  const fetchApplications = async () => {
-    try {
-      const response = await fetch(`${baseURL}/api/applications`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem("token")}`,
-          'Content-Type': 'application/json'
+  useEffect(() => {
+    const controller = new AbortController();
+    
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem("authToken");
+        const response = await axios.get(`${baseURL}/applications`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal
+        });
+        setApplications(response.data);
+      } catch (error) {
+        if (error.name !== 'CanceledError') {
+          setError("Failed to load applications");
+          console.error("Fetch error:", error);
         }
-      });
-      const data = await response.json();
-      setApplications(data);
-    } catch (error) {
-      console.error("Failed to load applications:", error);
-    }
-  };
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchApplications();
-}, []);
+    fetchApplications();
+    
+    // Set up auto-refresh
+    const intervalId = setInterval(fetchApplications, 30000);
+    
+    return () => {
+      controller.abort();
+      clearInterval(intervalId);
+    };
+  }, []);
 
+  if (loading) return <div className="flex justify-center items-center h-screen">Loading dashboard...</div>;
+  if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
 
   return (
     <div className="flex w-full min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* Admin Sidebar */}
       <AdminSidebar currentUser={currentUser} onLogout={onLogout} />
-
-      {/* Main Content */}
+      
       <main className="flex-1 p-6 overflow-y-auto">
         <Routes>
-          <Route path="/" element={
-            <AdminDashboardOverview applications={applications} />
-          } />
+          <Route path="/" element={<AdminDashboardOverview applications={applications} />} />
           <Route path="/applications" element={
             <ApplicationsManagement 
               applications={applications} 
               setApplications={setApplications} 
             />
           } />
-          <Route path="/notifications" element={
-            <AdminNotifications applications={applications} />
-          } />
+          <Route path="/notifications" element={<AdminNotifications applications={applications} />} />
           <Route path="/profile" element={
             <AdminProfile 
               currentUser={currentUser} 
@@ -581,7 +714,7 @@ useEffect(() => {
             />
           } />
         </Routes>
-      </main> 
+      </main>
     </div>
   );
 };
