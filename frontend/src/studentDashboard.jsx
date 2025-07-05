@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import ApplicationForm from "./components/ApplicationForm";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import axios from './api/axiosConfig'; // adjust path if needed
-// import { baseURL } from './api/axiosConfig'; // Add this import at the top
 
 import {
   LayoutDashboard,

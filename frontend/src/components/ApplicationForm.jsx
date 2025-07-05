@@ -1,72 +1,171 @@
 import React, { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, User, Building, Calendar, FileText, X, CheckCircle, Shield, Globe } from 'lucide-react';
 import axios from '../api/axiosConfig';
+
 const baseURL = import.meta.env.VITE_BACKEND_URL;
 
-import { Upload, User, Building, Calendar, FileText, X, CheckCircle, Shield, Globe } from 'lucide-react';
-
-const DRDOApplicationForm = ({ onSubmit, onClose, currentUser }) => {
+const ApplicationForm = ({ onSubmit, onClose, currentUser }) => {
   const [applicationData, setApplicationData] = useState({
-  position: '',
-  coverLetter: '',
-  expectedStartDate: '',
-  resume: null  // ✅ Only resume
-});
-
-const handleFileChange = (e) => {
-  setApplicationData({
-    ...applicationData,
-    resume: e.target.files[0]  // ✅ Single file only
+    laboratory: '',
+    position: '',
+    researchArea: '',
+    coverLetter: '',
+    expectedStartDate: '',
+    duration: '',
+    resume: null,
   });
-};
 
-const handleSubmit = async () => {
-  const { position, coverLetter, expectedStartDate, resume } = applicationData;
+  // DRDO Labs data based on search results
+  const drdoLabs = [
+    {
+      code: 'SSPL',
+      name: 'Solid State Physics Laboratory',
+      location: 'Delhi',
+      area: 'Materials & Electronics',
+    },
+    {
+      code: 'DESIDOC',
+      name: 'Defence Scientific Information & Documentation Centre',
+      location: 'Delhi',
+      area: 'Scientific Documentation & Library Sciences',
+    },
+    {
+      code: 'DIPR',
+      name: 'Defence Institute of Psychological Research',
+      location: 'Delhi',
+      area: 'Psychological Research & Human Behaviour',
+    },
+    {
+      code: 'INMAS',
+      name: 'Institute of Nuclear Medicine & Allied Sciences',
+      location: 'Delhi',
+      area: 'Biomedical & Nuclear Medicine',
+    },
+    {
+      code: 'SAG',
+      name: 'Scientific Analysis Group',
+      location: 'Delhi',
+      area: 'Cybersecurity & Cryptology',
+    },
+    {
+      code: 'ITRDC',
+      name: 'Institute for Technology Research and Development Cell',
+      location: 'Delhi',
+      area: 'Technology Innovation & R&D Support',
+    },
+  ];
 
-  if (!position || !coverLetter || !expectedStartDate || !resume) {
-    alert('Please fill in all required fields and upload a resume.');
-    return;
-  }
+  const positions = [
+    'Project Training Intern',
+    'Summer Research Intern',
+    'Junior Research Fellow (JRF)',
+    'Project Assistant',
+    'Research Associate',
+    'Technical Associate',
+  ];
 
-  const formData = new FormData();
-  formData.append('position', position);
-  formData.append('coverLetter', coverLetter);
-  formData.append('expectedStartDate', expectedStartDate);
-  formData.append('resume', resume); // ✅ Upload resume
+  const researchAreas = [
+    'Aeronautics & Aerospace',
+    'Armaments & Ballistics',
+    'Combat Vehicles',
+    'Electronics & Communication',
+    'Computer Science & AI',
+    'Cybersecurity',
+    'Missile Systems',
+    'Materials Science',
+    'Chemical Defence',
+    'Life Sciences',
+    'Naval Systems',
+    'Radar & Sonar',
+    'Simulation & Modelling',
+  ];
 
-  try {
-    const token = localStorage.getItem('authToken');
-    await axios.post(`${baseURL}/applications`, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setApplicationData({
+        ...applicationData,
+        resume: e.target.files[0],
+      });
+    }
+  };
 
-    alert('Application submitted successfully!');
-    const response = await axios.get(`${baseURL}/applications/student/mine`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+  const handleSubmit = async () => {
+    const { laboratory, position, researchArea, coverLetter, expectedStartDate, duration, resume } = applicationData;
 
-    onSubmit(response.data);
-    setApplicationData({
-      position: '',
-      coverLetter: '',
-      expectedStartDate: '',
-      resume: null
-    });
-    if (onClose) onClose();
+    // Validation
+    if (!laboratory || !position || !researchArea || !coverLetter || !expectedStartDate || !duration) {
+      alert('Please fill in all required fields');
+      return;
+    }
 
-  } catch (error) {
-    console.error('Submission error:', error);
-    alert('You will be informed about the status of your application.');
-  }
-};
+    if (!resume) {
+      alert('Please upload your resume');
+      return;
+    }
 
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Add form fields
+    formData.append('laboratory', laboratory);
+    formData.append('position', position);
+    formData.append('researchArea', researchArea);
+    formData.append('coverLetter', coverLetter);
+    formData.append('expectedStartDate', expectedStartDate);
+    formData.append('duration', duration);
+    
+    // Add resume file
+    formData.append('resume', resume);
 
- 
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // Submit application to backend
+      await axios.post(`${baseURL}/applications`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      alert('DRDO Application submitted successfully!');
+      
+      // Fetch updated applications list
+      const response = await axios.get(`${baseURL}/applications/student/mine`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Call parent onSubmit with updated data
+      onSubmit(response.data);
+      
+      // Reset form
+      setApplicationData({
+        laboratory: '',
+        position: '',
+        researchArea: '',
+        coverLetter: '',
+        expectedStartDate: '',
+        duration: '',
+        resume: null,
+      });
+      
+      // Close modal
+      if (onClose) onClose();
+
+    } catch (error) {
+      console.error('DRDO Application submission error:', error);
+      alert('Application submission failed. Please try again or contact support.');
+    }
+  };
+
+  const removeFile = () => {
+    setApplicationData({ ...applicationData, resume: null });
+  };
+
+  const selectedLab = drdoLabs.find(lab => lab.code === applicationData.laboratory);
+
   return (
     <div className="mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
       {/* DRDO Header */}
@@ -215,22 +314,87 @@ const handleSubmit = async () => {
             />
           </div>
 
-      <div className="border border-dashed border-gray-300 p-4 text-center rounded">
-        <Upload className="mx-auto text-gray-500 mb-2" size={24} />
-        <p className="text-sm text-gray-600 mb-2">Upload documents (Resume, Cover Letter, Certificates)</p>
-        <p className="text-xs text-gray-500 mb-2">PDF files only, max 5MB each</p>
-        <input 
-          type="file" 
-          accept=".pdf" 
-          onChange={handleFileChange}
-          className="w-full"
-        />
-        {applicationData.resume && (
-          <p className="text-sm text-green-600 mt-2">
-            {applicationData.resume.name} selected
-          </p>
-        )}
-      </div>
+          {/* Statement of Purpose */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="text-orange-600" size={18} />
+              <label className="text-sm font-semibold text-gray-700">
+                Statement of Purpose <span className="text-red-500">*</span>
+              </label>
+            </div>
+            <textarea
+              rows="6"
+              placeholder="Explain your interest in defence research, relevant academic background, and how this internship aligns with your career goals. Mention any specific projects or technologies you're interested in..."
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-orange-500 focus:outline-none transition-colors resize-none"
+              value={applicationData.coverLetter}
+              onChange={(e) =>
+                setApplicationData({ ...applicationData, coverLetter: e.target.value })
+              }
+              required
+            />
+            <p className="text-xs text-gray-500">
+              {applicationData.coverLetter.length}/1000 characters
+            </p>
+          </div>
+
+          {/* Resume Upload */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Upload className="text-orange-600" size={18} />
+              <label className="text-sm font-semibold text-gray-700">
+                Resume <span className="text-red-500">*</span>
+              </label>
+            </div>
+            
+            <div className="border-2 border-dashed border-orange-300 rounded-xl p-8 text-center hover:border-orange-400 transition-colors bg-orange-50/50 relative">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <div className="space-y-3 pointer-events-none">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full">
+                  <Upload className="text-orange-600" size={24} />
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-gray-700 mb-1">
+                    Click to upload your resume
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    PDF, DOC, DOCX files only, max 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* File Preview */}
+            {applicationData.resume && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <CheckCircle className="text-green-500" size={16} />
+                  Uploaded Resume
+                </h4>
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center gap-3">
+                    <FileText className="text-green-600" size={16} />
+                    <span className="text-sm font-medium text-green-800">
+                      {applicationData.resume.name}
+                    </span>
+                    <span className="text-xs text-green-600">
+                      {(applicationData.resume.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+                  <button
+                    onClick={removeFile}
+                    className="p-1 hover:bg-green-100 rounded-full transition-colors"
+                  >
+                    <X className="text-green-600" size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Declaration */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
@@ -264,4 +428,4 @@ const handleSubmit = async () => {
   );
 };
 
-export default DRDOApplicationForm;
+export default ApplicationForm;

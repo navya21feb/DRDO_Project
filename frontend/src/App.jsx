@@ -254,7 +254,18 @@ const App = () => {
   return (
     <UserProvider>
       <Router>
-        <AppContent />
+        <AppContent
+          currentUser={currentUser}
+          setCurrentUser={setCurrentUserWithPersistence}
+          applications={applications}
+          setApplications={setApplications}
+          notifications={notifications}
+          setNotifications={setNotifications}
+          students={students}
+          setStudents={setStudents}
+          universities={universities}
+          setUniversities={setUniversities}
+        />
       </Router>
     </UserProvider>
   );

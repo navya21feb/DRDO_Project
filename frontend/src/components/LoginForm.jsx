@@ -9,24 +9,34 @@ const LoginForm = ({ setCurrentUser }) => {
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const res = await axios.post("/auth/login", { email, password });
+  try {
+    const res = await axios.post("/auth/login", { email, password });
+    const { token, user } = res.data;
 
-      const { token, user } = res.data;
+    console.log("✅ Login response:", res.data);
 
-      localStorage.setItem("authToken", token);
-      localStorage.setItem("currentUser", JSON.stringify(user));
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    localStorage.setItem("authToken", token);
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
+    // ✅ Navigate only if login works
+    if (user?.role) {
+      const path = user.role === "admin" ? "/admin" : "/student";
+      console.log("Navigating to:", path);
       setCurrentUser(user);
-      navigate(user.role === "admin" ? "/admin" : "/overview");
-    } catch (err) {
-      alert("Login failed. Please check credentials.");
-      console.error(err);
+      navigate(path);
+    } else {
+      alert("User role not found");
     }
-  };
+
+  } catch (err) {
+    console.error("Login failed:", err?.response?.data || err.message);
+    alert("Login failed. Please check credentials.");
+  }
+};
+
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
