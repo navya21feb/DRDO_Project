@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ApplicationForm from "./components/ApplicationForm";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import axios from '../src/api/axiosConfig';
 
 import {
   LayoutDashboard,
@@ -29,6 +30,7 @@ import {
   Camera,
   CheckCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -828,48 +830,101 @@ const StudentNotifications = ({ applications }) => {
   );
 };
 
-// Main App component that manages user state
-const ProfileApp = () => {
-  const [currentUser, setCurrentUser] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    university: "",
-    branch: "",
-    year: "",
-    cgpa: "",
-    location: "",
-  });
-
-  return (
-    <div>
-      <StudentProfile
-        currentUser={currentUser}
-        setCurrentUser={setCurrentUser}
-      />
-    </div>
-  );
-};
-
 const StudentProfile = ({ currentUser, setCurrentUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...currentUser });
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const handleSave = async () => {
-    const updatedUser = { ...currentUser, ...formData };
-
-    try {
-      setCurrentUser(updatedUser);
-    } catch (error) {
-      // Optional: handle errors
-    }
-
-    setIsEditing(false);
-  };
-
+  // Update form data when currentUser changes
   useEffect(() => {
     setFormData({ ...currentUser });
   }, [currentUser]);
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Validate required fields
+      const requiredFields = ['name', 'email', 'university', 'branch', 'year'];
+      const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        setToast({
+          message: `Please fill in required fields: ${missingFields.join(', ')}`,
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setToast({
+          message: 'Please enter a valid email address',
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate CGPA if provided
+      if (formData.cgpa && (parseFloat(formData.cgpa) < 0 || parseFloat(formData.cgpa) > 10)) {
+        setToast({
+          message: 'CGPA must be between 0 and 10',
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Prepare update data (remove undefined/null values)
+      const updateData = {};
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== undefined && formData[key] !== null) {
+          updateData[key] = formData[key];
+        }
+      });
+
+      // Set profileCompleted to true if all required fields are filled
+      updateData.profileCompleted = requiredFields.every(field => updateData[field]?.trim());
+
+      // Make API call to update profile
+      const response = await axios.put('/users/update-profile', updateData);
+      
+      if (response.data.success) {
+        // Update current user state
+        const updatedUser = response.data.user;
+        setCurrentUser(updatedUser);
+        
+        // Update localStorage
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        
+        setToast({
+          message: 'Profile updated successfully!',
+          type: 'success'
+        });
+        
+        setIsEditing(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setToast({
+        message: error.response?.data?.message || 'Failed to update profile. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({ ...currentUser });
+    setIsEditing(false);
+  };
 
   const getInitials = (name) => {
     return (
@@ -946,6 +1001,14 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 overflow-y-auto">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="mx-auto">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 relative overflow-hidden">
@@ -991,17 +1054,20 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
                   <div className="flex space-x-2">
                     <button
                       onClick={handleSave}
-                      className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg"
+                      disabled={isLoading}
+                      className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg"
                     >
-                      <Save size={18} />
-                      <span>Save</span>
+                      {isLoading ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <Save size={18} />
+                      )}
+                      <span>{isLoading ? 'Saving...' : 'Save'}</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setFormData({ ...currentUser });
-                        setIsEditing(false);
-                      }}
-                      className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 border border-white/30"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                      className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 disabled:bg-white/10 text-white px-4 py-2 rounded-lg transition-all duration-200 border border-white/30"
                     >
                       <X size={18} />
                       <span>Cancel</span>

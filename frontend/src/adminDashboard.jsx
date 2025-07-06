@@ -681,12 +681,9 @@ const AdminDashboard = ({
 
     fetchApplications();
     
-    // Set up auto-refresh
-    const intervalId = setInterval(fetchApplications, 30000);
     
     return () => {
       controller.abort();
-      clearInterval(intervalId);
     };
   }, []);
 
