@@ -1,3 +1,4 @@
+// ✅ Full updated applicationController.js file
 const Application = require('../models/Application');
 const path = require('path');
 const fs = require('fs');
@@ -5,9 +6,6 @@ const fs = require('fs');
 // Create a new application
 exports.createApplication = async (req, res) => {
   try {
-    console.log("📥 Request Body:", req.body);
-    console.log("📎 Uploaded File:", req.file); // since using upload.single()
-
     const { position, coverLetter, expectedStartDate } = req.body;
 
     if (!position || !req.file) {
@@ -36,10 +34,7 @@ exports.createApplication = async (req, res) => {
 exports.getAllApplications = async (req, res) => {
   try {
     const apps = await Application.find()
-      .populate({
-        path: 'student',
-        select: 'name email branch'
-      })
+      .populate({ path: 'student', select: 'name email branch' })
       .sort({ submittedAt: -1 })
       .lean();
 
@@ -51,7 +46,7 @@ exports.getAllApplications = async (req, res) => {
       position: app.position,
       status: app.status,
       dateApplied: app.submittedAt?.toLocaleDateString() || 'N/A',
-      resume: app.resume, // ✅ Include resume filename so admin can view/download
+      resume: app.resume,
       coverLetter: app.coverLetter,
       expectedStartDate: app.expectedStartDate
     }));
@@ -63,38 +58,19 @@ exports.getAllApplications = async (req, res) => {
   }
 };
 
-
-// Update application status (Admin action) - FIXED
+// ✅ Updated application status with notification
 exports.updateStatus = async (req, res) => {
   try {
-    console.log("📝 Status update request received:");
-    console.log("   - App ID:", req.params.id);
-    console.log("   - Request Body:", req.body);
-    console.log("   - Content-Type:", req.get('Content-Type'));
-
-    // Better error handling for missing status
-    if (!req.body || !req.body.status) {
-      console.log("❌ Status missing in request body");
-      return res.status(400).json({ 
-        error: "Status is required in request body",
-        received: req.body
-      });
-    }
-
     const { id } = req.params;
     const { status } = req.body;
 
-    // Status validation
     const validStatuses = ["pending", "approved", "on hold", "rejected"];
     if (!validStatuses.includes(status)) {
-      console.log("❌ Invalid status:", status);
-      return res.status(400).json({ 
-        error: `Invalid status. Valid values are: ${validStatuses.join(', ')}`,
+      return res.status(400).json({
+        error: `Invalid status. Valid values are: ${validStatuses.join(", ")}`,
         received: status
       });
     }
-
-    console.log("✅ Updating application status to:", status);
 
     const updated = await Application.findByIdAndUpdate(
       id,
@@ -103,17 +79,15 @@ exports.updateStatus = async (req, res) => {
     ).populate("student", "name email branch");
 
     if (!updated) {
-      console.log("❌ Application not found:", id);
       return res.status(404).json({ error: "Application not found" });
     }
 
-    console.log("✅ Application updated successfully:", {
-      id: updated._id,
-      status: updated.status,
-      student: updated.student?.name
-    });
+    const notification = {
+      type: status,
+      message: `Your application for ${updated.position} has been ${status}.`,
+      date: new Date().toISOString()
+    };
 
-    // Return consistent format
     res.status(200).json({
       message: "Status updated successfully",
       status: updated.status,
@@ -124,19 +98,19 @@ exports.updateStatus = async (req, res) => {
         email: updated.student?.email,
         branch: updated.student?.branch,
         position: updated.position
-      }
+      },
+      notification
     });
-    
   } catch (error) {
     console.error("❌ Status update error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Internal server error",
-      details: error.message 
+      details: error.message
     });
   }
 };
 
-// Get applications for a specific student (Student dashboard)
+// Get applications for a specific student
 exports.getStudentApplications = async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -145,12 +119,11 @@ exports.getStudentApplications = async (req, res) => {
       .sort({ submittedAt: -1 })
       .lean();
 
-    // Format for student view
     const formattedApps = apps.map(app => ({
       ...app,
       dateApplied: app.submittedAt?.toLocaleDateString(),
       status: app.status,
-      resume:app.resume
+      resume: app.resume
     }));
 
     res.status(200).json(formattedApps);
@@ -160,7 +133,7 @@ exports.getStudentApplications = async (req, res) => {
   }
 };
 
-// Get single application - MODIFIED
+// Get single application
 exports.getApplication = async (req, res) => {
   try {
     const { id } = req.params;
@@ -173,7 +146,6 @@ exports.getApplication = async (req, res) => {
       return res.status(404).json({ error: "Application not found." });
     }
 
-    // Format response
     const formattedApp = {
       ...app,
       studentName: app.student?.name,
@@ -191,22 +163,18 @@ exports.getApplication = async (req, res) => {
   }
 };
 
-// Add this new function to serve resume files
+// Serve resume files
 exports.getResume = async (req, res) => {
   try {
     const { filename } = req.params;
     const filePath = path.join(__dirname, '../uploads', filename);
-    
-    // Check if file exists
+
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Resume file not found' });
     }
-    
-    // Set appropriate headers for PDF
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
-    
-    // Send the file
     res.sendFile(filePath);
   } catch (error) {
     console.error('Error serving resume:', error);
@@ -214,12 +182,9 @@ exports.getResume = async (req, res) => {
   }
 };
 
-
 exports.deleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Optionally: check if the application belongs to the logged-in student
     const app = await Application.findById(id);
     if (!app) {
       return res.status(404).json({ error: "Application not found" });
@@ -230,11 +195,9 @@ exports.deleteApplication = async (req, res) => {
     }
 
     await Application.findByIdAndDelete(id);
-
     res.status(200).json({ message: "Application deleted successfully" });
   } catch (error) {
     console.error("Error deleting application:", error);
     res.status(500).json({ error: "Failed to delete application" });
   }
 };
-
