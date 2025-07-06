@@ -6,7 +6,8 @@ const {
   getApplication,
   updateStatus,
   getStudentApplications,
-  getResume
+  getResume,
+  deleteApplication 
 } = require('../controllers/applicationController');
 
 const authMiddleware = require('../middlewares/authMiddleware');
@@ -22,6 +23,7 @@ router.put('/:id/status', authMiddleware, updateStatus);
 
 // Student Routes
 router.get('/student/mine', authMiddleware, getStudentApplications);
+router.delete('/:id', authMiddleware, deleteApplication);
 
 // ✅ Serve uploaded resume
 router.get('/resume/:filename', getResume);

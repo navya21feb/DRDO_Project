@@ -213,3 +213,28 @@ exports.getResume = async (req, res) => {
     res.status(500).json({ error: 'Failed to serve resume file' });
   }
 };
+
+
+exports.deleteApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Optionally: check if the application belongs to the logged-in student
+    const app = await Application.findById(id);
+    if (!app) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+
+    if (app.student.toString() !== req.user.id) {
+      return res.status(403).json({ error: "You are not authorized to delete this application." });
+    }
+
+    await Application.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Application deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting application:", error);
+    res.status(500).json({ error: "Failed to delete application" });
+  }
+};
+
