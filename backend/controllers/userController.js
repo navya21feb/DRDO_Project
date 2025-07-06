@@ -126,6 +126,42 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
+exports.updateProfile = async (req, res) => {
+  try {
+    const { id } = req.user; // coming from token
+    const updates = req.body;
+
+    // Remove sensitive fields that shouldn't be updated
+    delete updates.password;
+    delete updates.role;
+
+    const updatedUser = await User.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true
+    }).select('-password'); // Don't return password
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      user: updatedUser,
+      message: "Profile updated successfully"
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to update profile", 
+      error: error.message 
+    });
+  }
+};
+
 // Get current user profile
 exports.getProfile = async (req, res) => {
   try {

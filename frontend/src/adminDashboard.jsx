@@ -512,16 +512,88 @@ const AdminNotifications = ({ applications }) => {
 const AdminProfile = ({ currentUser, setCurrentUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: currentUser?.name || 'Admin User',
-    email: currentUser?.email || 'admin@drdo.gov.in',
-    phone: currentUser?.phone || '(Add your phone number)',
-    department: currentUser?.department || 'Administration',
-    location: currentUser?.location || '(Add your location)',
+    name: '',
+    email: '',
+    phone: '',
+    department: '',
+    location: '',
   });
 
-  const handleSave = () => {
-    setCurrentUser({ ...currentUser, ...formData });
-    setIsEditing(false);
+  // Fetch admin profile on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const response = await axios.get(`${baseURL}/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          const userData = response.data.user;
+          setFormData({
+            name: userData.name || 'Admin User',
+            email: userData.email || 'admin@drdo.gov.in',
+            phone: userData.phone || '(Add your phone number)',
+            department: userData.department || 'Administration',
+            location: userData.location || '(Add your location)',
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+        // Fallback to currentUser if API fails
+        setFormData({
+          name: currentUser?.name || 'Admin User',
+          email: currentUser?.email || 'admin@drdo.gov.in',
+          phone: currentUser?.phone || '(Add your phone number)',
+          department: currentUser?.department || 'Administration',
+          location: currentUser?.location || '(Add your location)',
+        });
+      }
+    };
+
+    fetchUserProfile();
+  }, [currentUser]);
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        return;
+      }
+
+      const response = await axios.put(
+        `${baseURL}/users/update-profile`,
+        {
+          name: formData.name,
+          phone: formData.phone,
+          department: formData.department,
+          location: formData.location
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Update the current user state with the response data
+        setCurrentUser(response.data.user);
+        setIsEditing(false);
+        alert("Profile updated successfully!");
+      } else {
+        alert("Failed to update profile. Please try again.");
+      }
+    } catch (error) {
+      console.error("Profile update error:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to update profile';
+      alert(`Error: ${errorMessage}`);
+    }
   };
 
   return (
