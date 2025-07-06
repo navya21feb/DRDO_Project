@@ -12,6 +12,7 @@ const UserSchema = new mongoose.Schema({
   year: { type: String },
   university: { type: String },
   location: { type: String },
+  department: { type: String }, // Add this field for admin users
   profileCompleted: { type: Boolean, default: false },
   dashboardData: {
     marks: { type: Number, default: 0 },

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ApplicationForm from "./components/ApplicationForm";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import axios from '../src/api/axiosConfig';
 
 import {
   LayoutDashboard,
@@ -29,6 +30,7 @@ import {
   Camera,
   CheckCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -438,6 +440,8 @@ const StudentDashboardOverview = ({ applications, currentUser }) => {
   );
 };
 
+const baseURL = "http://localhost:5000/api"; 
+
 const MyApplications = ({ applications, onDeleteApplication }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -451,38 +455,32 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleDeleteApplication = (appId) => {
+  const handleDeleteApplication = async (appId) => {
     if (window.confirm("Are you sure you want to delete this application?")) {
-      onDeleteApplication(appId);
+      await onDeleteApplication(appId);
     }
   };
 
   return (
     <div className="space-y-6 relative">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">My Applications</h1>
-        <p className="text-gray-600 mt-2">
-          Track your lab applications and their status
-        </p>
+        <p className="text-gray-600 mt-2">Track your lab applications and their status</p>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Search labs or branches..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder="Search labs or branches..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <select
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-300 rounded-lg"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -493,7 +491,6 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
         </select>
       </div>
 
-      {/* Applications Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredApplications.length === 0 ? (
           <div className="col-span-full text-center py-12">
@@ -511,7 +508,7 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
             {applications.length === 0 && (
               <button
                 onClick={() => (window.location.href = "/student/apply")}
-                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
               >
                 <Plus className="w-5 h-5" />
                 <span>Submit Application</span>
@@ -521,8 +518,8 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
         ) : (
           filteredApplications.map((app) => (
             <div
-              key={app.id}
-              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow"
+              key={app._id}
+              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -530,9 +527,7 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
                     <BookOpen className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">
-                      {app.labApplied}
-                    </h3>
+                    <h3 className="font-medium text-gray-900">{app.labApplied}</h3>
                     <p className="text-sm text-gray-600">{app.branch}</p>
                   </div>
                 </div>
@@ -551,7 +546,7 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
                     {app.status}
                   </span>
                   <button
-                    onClick={() => handleDeleteApplication(app.id)}
+                    onClick={() => handleDeleteApplication(app._id)}
                     className="text-red-500 hover:text-red-700 p-1"
                     title="Delete application"
                   >
@@ -570,8 +565,7 @@ const MyApplications = ({ applications, onDeleteApplication }) => {
                   <span>Status: {app.status}</span>
                 </div>
               </div>
-
-              <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => setSelectedApplication(app)}
                   className="w-full text-center text-blue-600 hover:text-blue-800 text-sm font-medium"
@@ -656,6 +650,24 @@ const ApplyNow = ({ currentUser, onSubmitApplication, onCloseForm }) => {
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
 
+  useEffect(() => {
+    const isProfileComplete = () => {
+      const requiredFields = ["name", "email", "university", "branch", "year"];
+      return requiredFields.every((field) => currentUser[field]?.trim());
+    };
+
+    if (!isProfileComplete()) {
+      setToast({
+        message: "Please complete your profile before applying.",
+        type: "error",
+      });
+
+      setTimeout(() => {
+        navigate("/student/profile");
+      }, 2000);
+    }
+  }, [currentUser, navigate]);
+
   const handleSubmit = (applicationData) => {
     const newApplication = {
       id: Date.now(),
@@ -688,6 +700,10 @@ const ApplyNow = ({ currentUser, onSubmitApplication, onCloseForm }) => {
     }, 2000);
   };
 
+  const isProfileComplete = ["name", "email", "university", "branch", "year"].every(
+    (field) => currentUser[field]?.trim()
+  );
+
   return (
     <div className="space-y-6">
       {toast && (
@@ -698,23 +714,28 @@ const ApplyNow = ({ currentUser, onSubmitApplication, onCloseForm }) => {
         />
       )}
 
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Apply Now</h1>
-        <p className="text-gray-600 mt-2">
-          Submit your application for an internship position
-        </p>
-      </div>
+      {isProfileComplete && (
+        <>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Apply Now</h1>
+            <p className="text-gray-600 mt-2">
+              Submit your application for an internship position
+            </p>
+          </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <ApplicationForm
-          onSubmit={handleSubmit}
-          onClose={onCloseForm}
-          currentUser={currentUser}
-        />
-      </div>
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <ApplicationForm
+              onSubmit={handleSubmit}
+              onClose={onCloseForm}
+              currentUser={currentUser}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };
+
 
 // Student Notifications Component
 const StudentNotifications = ({ applications }) => {
@@ -809,48 +830,101 @@ const StudentNotifications = ({ applications }) => {
   );
 };
 
-// Main App component that manages user state
-const ProfileApp = () => {
-  const [currentUser, setCurrentUser] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    university: "",
-    branch: "",
-    year: "",
-    cgpa: "",
-    location: "",
-  });
-
-  return (
-    <div>
-      <StudentProfile
-        currentUser={currentUser}
-        setCurrentUser={setCurrentUser}
-      />
-    </div>
-  );
-};
-
 const StudentProfile = ({ currentUser, setCurrentUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...currentUser });
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const handleSave = async () => {
-    const updatedUser = { ...currentUser, ...formData };
-
-    try {
-      setCurrentUser(updatedUser);
-    } catch (error) {
-      // Optional: handle errors
-    }
-
-    setIsEditing(false);
-  };
-
+  // Update form data when currentUser changes
   useEffect(() => {
     setFormData({ ...currentUser });
   }, [currentUser]);
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Validate required fields
+      const requiredFields = ['name', 'email', 'university', 'branch', 'year'];
+      const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        setToast({
+          message: `Please fill in required fields: ${missingFields.join(', ')}`,
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setToast({
+          message: 'Please enter a valid email address',
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate CGPA if provided
+      if (formData.cgpa && (parseFloat(formData.cgpa) < 0 || parseFloat(formData.cgpa) > 10)) {
+        setToast({
+          message: 'CGPA must be between 0 and 10',
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Prepare update data (remove undefined/null values)
+      const updateData = {};
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== undefined && formData[key] !== null) {
+          updateData[key] = formData[key];
+        }
+      });
+
+      // Set profileCompleted to true if all required fields are filled
+      updateData.profileCompleted = requiredFields.every(field => updateData[field]?.trim());
+
+      // Make API call to update profile
+      const response = await axios.put('/users/update-profile', updateData);
+      
+      if (response.data.success) {
+        // Update current user state
+        const updatedUser = response.data.user;
+        setCurrentUser(updatedUser);
+        
+        // Update localStorage
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        
+        setToast({
+          message: 'Profile updated successfully!',
+          type: 'success'
+        });
+        
+        setIsEditing(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setToast({
+        message: error.response?.data?.message || 'Failed to update profile. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({ ...currentUser });
+    setIsEditing(false);
+  };
 
   const getInitials = (name) => {
     return (
@@ -863,18 +937,78 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
   };
 
   const fieldConfig = [
-    { label: "Full Name", key: "name", placeholder: "e.g. Shreya Gupta", icon: User, required: true },
-    { label: "Email", key: "email", placeholder: "e.g. shreya@example.com", icon: Mail, type: "email", required: true },
-    { label: "Phone", key: "phone", placeholder: "e.g. 9876543210", icon: Phone, type: "tel" },
-    { label: "University", key: "university", placeholder: "e.g. IGDTUW", icon: Building, required: true },
-    { label: "Branch", key: "branch", placeholder: "e.g. Computer Science", icon: GraduationCap, required: true },
-    { label: "Year", key: "year", type: "select", icon: Calendar, options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"], required: true },
-    { label: "CGPA", key: "cgpa", placeholder: "e.g. 9.1", icon: Award, type: "number", step: "0.1", min: "0", max: "10" },
-    { label: "Location", key: "location", placeholder: "e.g. New Delhi", icon: MapPin },
+    {
+      label: "Full Name",
+      key: "name",
+      placeholder: "e.g. Shreya Gupta",
+      icon: User,
+      required: true,
+    },
+    {
+      label: "Email",
+      key: "email",
+      placeholder: "e.g. shreya@example.com",
+      icon: Mail,
+      type: "email",
+      required: true,
+    },
+    {
+      label: "Phone",
+      key: "phone",
+      placeholder: "e.g. 9876543210",
+      icon: Phone,
+      type: "tel",
+    },
+    {
+      label: "University",
+      key: "university",
+      placeholder: "e.g. IGDTUW",
+      icon: Building,
+      required: true,
+    },
+    {
+      label: "Branch",
+      key: "branch",
+      placeholder: "e.g. Computer Science",
+      icon: GraduationCap,
+      required: true,
+    },
+    {
+      label: "Year",
+      key: "year",
+      type: "select",
+      icon: Calendar,
+      options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"],
+      required: true,
+    },
+    {
+      label: "CGPA",
+      key: "cgpa",
+      placeholder: "e.g. 9.1",
+      icon: Award,
+      type: "number",
+      step: "0.1",
+      min: "0",
+      max: "10",
+    },
+    {
+      label: "Location",
+      key: "location",
+      placeholder: "e.g. New Delhi",
+      icon: MapPin,
+    },
   ];
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 overflow-y-auto">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="mx-auto">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 relative overflow-hidden">
@@ -896,9 +1030,15 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
               </div>
 
               <div className="text-white">
-                <h2 className="text-3xl font-bold mb-1">{formData.name || "Your Name"}</h2>
-                <p className="text-white/90 text-lg mb-1">{formData.branch || "Your Branch"} Student</p>
-                <p className="text-white/70 text-sm">{formData.university || "Your University"}</p>
+                <h2 className="text-3xl font-bold mb-1">
+                  {formData.name || "Your Name"}
+                </h2>
+                <p className="text-white/90 text-lg mb-1">
+                  {formData.branch || "Your Branch"} Student
+                </p>
+                <p className="text-white/70 text-sm">
+                  {formData.university || "Your University"}
+                </p>
               </div>
 
               <div className="ml-auto">
@@ -914,17 +1054,20 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
                   <div className="flex space-x-2">
                     <button
                       onClick={handleSave}
-                      className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg"
+                      disabled={isLoading}
+                      className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg"
                     >
-                      <Save size={18} />
-                      <span>Save</span>
+                      {isLoading ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <Save size={18} />
+                      )}
+                      <span>{isLoading ? 'Saving...' : 'Save'}</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setFormData({ ...currentUser });
-                        setIsEditing(false);
-                      }}
-                      className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 border border-white/30"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                      className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 disabled:bg-white/10 text-white px-4 py-2 rounded-lg transition-all duration-200 border border-white/30"
                     >
                       <X size={18} />
                       <span>Cancel</span>
@@ -937,61 +1080,78 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
 
           <div className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {fieldConfig.map(({ label, key, placeholder, icon: Icon, type, options, required, ...inputProps }) => (
-                <div key={key} className="group">
-                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-3">
-                    <Icon size={16} className="text-gray-500" />
-                    <span>{label}</span>
-                    {required && <span className="text-red-500">*</span>}
-                  </label>
+              {fieldConfig.map(
+                ({
+                  label,
+                  key,
+                  placeholder,
+                  icon: Icon,
+                  type,
+                  options,
+                  required,
+                  ...inputProps
+                }) => (
+                  <div key={key} className="group">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-3">
+                      <Icon size={16} className="text-gray-500" />
+                      <span>{label}</span>
+                      {required && <span className="text-red-500">*</span>}
+                    </label>
 
-                  {isEditing ? (
-                    <div className="relative">
-                      {type === "select" ? (
-                        <select
-                          value={formData[key] || ""}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              [key]: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
-                        >
-                          <option value="" disabled>
-                            Select {label}
-                          </option>
-                          {options.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
+                    {isEditing ? (
+                      <div className="relative">
+                        {type === "select" ? (
+                          <select
+                            value={formData[key] || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                [key]: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
+                          >
+                            <option value="" disabled>
+                              Select {label}
                             </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type={type || "text"}
-                          value={formData[key] || ""}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              [key]: e.target.value,
-                            })
-                          }
-                          placeholder={placeholder}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
-                          {...inputProps}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-100 rounded-xl p-4 border-2 border-transparent hover:border-gray-200 transition-all duration-200">
-                      <p className={`text-sm ${formData[key] ? "text-gray-900 font-medium" : "text-gray-400 italic"}`}>
-                        {formData[key] || placeholder}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                            {options.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={type || "text"}
+                            value={formData[key] || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                [key]: e.target.value,
+                              })
+                            }
+                            placeholder={placeholder}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:border-gray-300"
+                            {...inputProps}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-100 rounded-xl p-4 border-2 border-transparent hover:border-gray-200 transition-all duration-200">
+                        <p
+                          className={`text-sm ${
+                            formData[key]
+                              ? "text-gray-900 font-medium"
+                              : "text-gray-400 italic"
+                          }`}
+                        >
+                          {formData[key] || placeholder}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -1004,15 +1164,56 @@ const StudentProfile = ({ currentUser, setCurrentUser }) => {
   );
 };
 
-
 const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
-  const [applications, setApplications] = useState(
-    loadApplicationsFromStorage()
-  );
+  const [applications, setApplications] = useState([]);
 
   useEffect(() => {
-    saveApplicationsToStorage(applications);
-  }, [applications]);
+    const fetchApplications = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const response = await fetch(`${baseURL}/applications/student/mine`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        setApplications(data);
+        saveApplicationsToStorage(data);
+      } catch (err) {
+        console.error("Failed to fetch applications:", err);
+        // Fallback to localStorage if server fails
+        setApplications(loadApplicationsFromStorage());
+      }
+    };
+    fetchApplications();
+  }, []);
+
+  const handleDeleteApplication = async (appId) => {
+    if (!window.confirm("Are you sure you want to delete this application?")) return;
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`${baseURL}/applications/${appId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert(`Failed to delete: ${errorData.error || "Unknown error"}`);
+        return;
+      }
+
+      const updated = applications.filter((app) => app._id !== appId);
+      setApplications(updated);
+      saveApplicationsToStorage(updated);
+
+      alert("Application deleted successfully!");
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Something went wrong while deleting.");
+    }
+  };
 
   return (
     <div className="flex w-full min-h-screen overflow-hidden">
@@ -1033,11 +1234,7 @@ const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
             element={
               <MyApplications
                 applications={applications}
-                onDeleteApplication={(appId) => {
-                  setApplications((prev) =>
-                    prev.filter((app) => app.id !== appId)
-                  );
-                }}
+                onDeleteApplication={handleDeleteApplication}
               />
             }
           />
@@ -1046,9 +1243,11 @@ const StudentDashboard = ({ currentUser, setCurrentUser, onLogout }) => {
             element={
               <ApplyNow
                 currentUser={currentUser}
-                onSubmitApplication={(newApp) =>
-                  setApplications((prev) => [newApp, ...prev])
-                }
+                onSubmitApplication={(newApp) => {
+                  const updated = [newApp, ...applications];
+                  setApplications(updated);
+                  saveApplicationsToStorage(updated);
+                }}
               />
             }
           />

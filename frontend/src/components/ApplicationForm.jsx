@@ -349,7 +349,7 @@ const ApplicationForm = ({ onSubmit, onClose, currentUser }) => {
             <div className="border-2 border-dashed border-orange-300 rounded-xl p-8 text-center hover:border-orange-400 transition-colors bg-orange-50/50 relative">
               <input
                 type="file"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf"
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
@@ -362,7 +362,7 @@ const ApplicationForm = ({ onSubmit, onClose, currentUser }) => {
                     Click to upload your resume
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    PDF, DOC, DOCX files only, max 5MB
+                    PDF files only, max 5MB
                   </p>
                 </div>
               </div>
