@@ -156,7 +156,7 @@ const StudentSidebar = ({ currentUser, onLogout }) => {
             <span className="text-blue-600 font-bold">D</span>
           </div>
           <div>
-            <h2 className="text-xl font-bold">DRDO Portal</h2>
+            <h2 className="text-xl font-bold">Internship Application Portal</h2>
             <p className="text-blue-200 text-sm">Student Panel</p>
           </div>
         </div>
